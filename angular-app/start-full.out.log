@@ -102,3 +102,8 @@
 [1] Application bundle generation complete. [0.366 seconds]
 [1] 
 [1] Page reload sent to client(s).
+[0] npm run start:api exited with code 4294967295
+[1] [1m[31m[2m22:26:25[22m[1m [31m[1m[vite][22m[1m[31m [31mhttp proxy error: /api/auth/login[31m
+[1] Error: connect ECONNREFUSED 127.0.0.1:3000
+[1]     at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1602:16)[39m[22m
+[1] npm run start:ui exited with code 4294967295
