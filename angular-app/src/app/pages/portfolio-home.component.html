@@ -1,0 +1,623 @@
+<main class="page-shell">
+  <section class="hero">
+    <div>
+      <p class="eyebrow">{{ pageEyebrow }}</p>
+      <h1>{{ pageTitle }}</h1>
+      <p class="hero-copy">
+        Consulta toda la informaciónd e tu cartera desde un único lugar.
+      </p>
+    </div>
+
+    <div class="hero-side">
+      @if (lastUpdated) {
+        <div class="hero-card">
+          <span class="hero-card__label">Ultima fecha de mercado</span>
+          <strong>{{ lastUpdated }}</strong>
+        </div>
+      }
+
+      @if (showDevaLink) {
+        <a class="hero-switch-link" [routerLink]="devaLink">
+          <span>Cartera de Deva</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 12h12M13 6l6 6-6 6" />
+          </svg>
+        </a>
+      }
+
+      @if (showMainLink) {
+        <a class="hero-switch-link" [routerLink]="mainLink">
+          <span>Mi cartera</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M5 12h12M13 6l6 6-6 6" />
+          </svg>
+        </a>
+      }
+    </div>
+  </section>
+
+  @if (isLoading) {
+    <section class="status-card">
+      <h2>Cargando cartera</h2>
+      <p>Estamos leyendo el Excel y calculando los resumenes.</p>
+    </section>
+  } @else if (errorMessage) {
+    <section class="status-card status-card--error">
+      <h2>No se pudo cargar la cartera</h2>
+      <p>{{ errorMessage }}</p>
+    </section>
+  } @else {
+    <section class="tabs-card">
+      <button type="button" [class.is-active]="activeTab === 'posiciones'" (click)="setActiveTab('posiciones')">
+        Posiciones
+      </button>
+      <button type="button" [class.is-active]="activeTab === 'resumen'" (click)="setActiveTab('resumen')">
+        Resumen
+      </button>
+    </section>
+
+    @if (activeTab === 'posiciones') {
+      <section class="toolbar-card">
+        <div class="toolbar-filters">
+          <label class="field">
+            <span>Buscar activo</span>
+            <input
+              type="search"
+              [(ngModel)]="searchTerm"
+              (ngModelChange)="updateFilters()"
+              placeholder="Nombre, ISIN o tipo"
+            />
+          </label>
+
+          <label class="field">
+            <span>Filtrar por tipo</span>
+            <select [(ngModel)]="selectedType" (ngModelChange)="updateFilters()">
+              @for (type of availableTypes; track type) {
+                <option [value]="type">{{ type }}</option>
+              }
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Fecha de valor liquidativo</span>
+            <input type="date" [(ngModel)]="selectedDate" />
+          </label>
+
+          <div class="chip-row">
+            <button type="button" (click)="applySelectedDate()" [disabled]="!hasPendingDateChange || isLoading">
+              Aplicar fecha
+            </button>
+            <button type="button" (click)="clearSelectedDate()">Quitar fecha</button>
+          </div>
+        </div>
+
+        @if (portfolioTotals) {
+          <div class="hero-card hero-card--highlight toolbar-summary">
+            <span class="hero-card__label">Rentabilidad total</span>
+            <strong [class.negative]="portfolioTotals.profitEurosValue < 0" [class.positive]="portfolioTotals.profitEurosValue > 0">
+              {{ portfolioTotals.totalReturn }}
+            </strong>
+            <span class="hero-card__value" [class.negative]="portfolioTotals.profitEurosValue < 0" [class.positive]="portfolioTotals.profitEurosValue > 0">
+              {{ portfolioTotals.profitEuros }}
+            </span>
+          </div>
+        }
+      </section>
+
+      <section class="section-grid">
+        @for (section of filteredSections; track trackBySection($index, section)) {
+          <article class="portfolio-card">
+            <header class="portfolio-card__header">
+              <div>
+                <p class="eyebrow">{{ section.title }}</p>
+                <h2>{{ section.title === 'FONDOS' ? 'Fondos de inversion' : 'Acciones' }}</h2>
+              </div>
+              <div class="portfolio-card__actions">
+                @if (section.title === 'FONDOS') {
+                  <button type="button" class="edit-toggle" (click)="toggleFundEditMode()">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path
+                        d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm17.71-10.04a1.003 1.003 0 0 0 0-1.42l-2.5-2.5a1.003 1.003 0 0 0-1.42 0l-1.96 1.96 3.75 3.75 2.13-1.79z"
+                      />
+                    </svg>
+                    {{ isFundEditMode ? 'Cerrar edicion' : 'Editar' }}
+                  </button>
+                  <button type="button" class="edit-toggle edit-toggle--primary" (click)="openAddFundModal()">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M19 11H13V5h-2v6H5v2h6v6h2v-6h6z" />
+                    </svg>
+                    Añadir
+                  </button>
+                }
+                <span class="counter">{{ getSectionTotalRows(section) }} posiciones visibles</span>
+              </div>
+            </header>
+
+            @if (section.totals) {
+              <div class="totals-strip">
+                <div>
+                  <span>Total invertido</span>
+                  <strong>{{ section.totals.totalInvested }}</strong>
+                </div>
+                <div>
+                  <span>Valoracion total</span>
+                  <strong>{{ section.totals.totalValuation }}</strong>
+                </div>
+                <div>
+                  <span>Rentabilidad EUR</span>
+                  <strong
+                    [class.negative]="section.totals.profitEurosValue < 0"
+                    [class.positive]="section.totals.profitEurosValue > 0"
+                  >{{ section.totals.profitEuros }}</strong>
+                </div>
+                <div>
+                  <span>Rentabilidad total</span>
+                  <strong
+                    [class.negative]="section.totals.totalReturnValue < 0"
+                    [class.positive]="section.totals.totalReturnValue > 0"
+                  >{{ section.totals.totalReturn || '-' }}</strong>
+                </div>
+              </div>
+            }
+
+            <div class="table-shell">
+              <table class="portfolio-table">
+                <thead>
+                  <tr>
+                    <th class="cell-action"></th>
+                    <th class="cell-asset" role="button" (click)="sortBy('name')">Activo</th>
+                    <th class="cell-position">Participaciones</th>
+                    <th class="cell-invested" role="button" (click)="sortBy('totalInvestedValue')">Invertido</th>
+                    <th class="cell-market" role="button" (click)="sortBy('marketDate')">Mercado</th>
+                    <th class="cell-valuation" role="button" (click)="sortBy('totalValuationValue')">Valoracion</th>
+                    <th class="cell-performance" role="button" (click)="sortBy('totalReturnValue')">Rentabilidad</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  @for (row of section.rows; track trackByRow($index, row)) {
+                    <tr>
+                      <td class="cell-action">
+                        <a
+                          class="row-link-button"
+                          [routerLink]="getDetailRoute(row)"
+                          [attr.aria-label]="'Abrir ficha de ' + row.name"
+                        >
+                          <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path
+                              d="M6 2h9l5 5v15a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zm8 1.5V8h4.5"
+                            />
+                            <path d="M8 12h8M8 16h8M8 20h5" />
+                          </svg>
+                        </a>
+                      </td>
+                      <td class="cell-name cell-asset">
+                        <strong>{{ row.name }}</strong>
+                        <span class="cell-meta">{{ row.isin || 'Sin ISIN' }}</span>
+                        <span class="cell-meta">Tipo: {{ row.type || 'Sin tipo' }}</span>
+                        <div class="editable-cell editable-cell--stack" (click)="$event.stopPropagation()">
+                          @if (isEditingCell(row.id, 'investmentClass')) {
+                            <select
+                              class="editable-cell__input editable-cell__select"
+                              [ngModel]="editingCell?.draftValue || investmentClassOptions[0]"
+                              (ngModelChange)="updateEditingValue($event)"
+                              (click)="$event.stopPropagation()"
+                            >
+                              @for (option of investmentClassOptions; track option) {
+                                <option [value]="option">{{ option }}</option>
+                              }
+                            </select>
+                            <button
+                              type="button"
+                              class="icon-button icon-button--confirm"
+                              (click)="saveEditingCell(row, 'investmentClass', $event)"
+                              [disabled]="isSavingCell(row.id, 'investmentClass')"
+                              aria-label="Guardar clase"
+                            >
+                              <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z" />
+                              </svg>
+                            </button>
+                          } @else {
+                            <span class="cell-meta">Clase: {{ row.investmentClass || '-' }}</span>
+                            @if (section.title === 'FONDOS' && isFundEditMode) {
+                              <button
+                                type="button"
+                                class="icon-button"
+                                (click)="startEditingCell(row, 'investmentClass', $event)"
+                                aria-label="Editar clase"
+                              >
+                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                  <path
+                                    d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm17.71-10.04a1.003 1.003 0 0 0 0-1.42l-2.5-2.5a1.003 1.003 0 0 0-1.42 0l-1.96 1.96 3.75 3.75 2.13-1.79z"
+                                  />
+                                </svg>
+                              </button>
+                            }
+                          }
+                        </div>
+                        @if (row.investmentClass) {
+                          <span class="cell-meta">Clase: {{ row.investmentClass }}</span>
+                        }
+                        <span class="cell-meta">{{ (row.type || 'Sin tipo') + (row.investmentClass ? ' · ' + row.investmentClass : '') }}</span>
+                      </td>
+                      <td class="cell-position">
+                        <div class="editable-cell" (click)="$event.stopPropagation()">
+                          @if (isEditingCell(row.id, 'shares')) {
+                            <input
+                              class="editable-cell__input"
+                              type="text"
+                              [ngModel]="editingCell?.draftValue || ''"
+                              (ngModelChange)="updateEditingValue($event)"
+                              (click)="$event.stopPropagation()"
+                            />
+                            <button
+                              type="button"
+                              class="icon-button icon-button--confirm"
+                              (click)="saveEditingCell(row, 'shares', $event)"
+                              [disabled]="isSavingCell(row.id, 'shares')"
+                              aria-label="Guardar participaciones"
+                            >
+                              <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z" />
+                              </svg>
+                            </button>
+                          } @else {
+                            <span>{{ row.shares }}</span>
+                            @if (section.title === 'FONDOS' && isFundEditMode) {
+                              <button
+                                type="button"
+                                class="icon-button"
+                                (click)="startEditingCell(row, 'shares', $event)"
+                                aria-label="Editar participaciones"
+                              >
+                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                  <path
+                                    d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm17.71-10.04a1.003 1.003 0 0 0 0-1.42l-2.5-2.5a1.003 1.003 0 0 0-1.42 0l-1.96 1.96 3.75 3.75 2.13-1.79z"
+                                  />
+                                </svg>
+                              </button>
+                            }
+                          }
+                        </div>
+                      </td>
+                      <td class="cell-invested">
+                        <div class="editable-cell" (click)="$event.stopPropagation()">
+                          @if (isEditingCell(row.id, 'totalInvested')) {
+                            <input
+                              class="editable-cell__input"
+                              type="text"
+                              [ngModel]="editingCell?.draftValue || ''"
+                              (ngModelChange)="updateEditingValue($event)"
+                              (click)="$event.stopPropagation()"
+                            />
+                            <button
+                              type="button"
+                              class="icon-button icon-button--confirm"
+                              (click)="saveEditingCell(row, 'totalInvested', $event)"
+                              [disabled]="isSavingCell(row.id, 'totalInvested')"
+                              aria-label="Guardar total invertido"
+                            >
+                              <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z" />
+                              </svg>
+                            </button>
+                          } @else {
+                            <span>{{ row.totalInvested }}</span>
+                            @if (section.title === 'FONDOS' && isFundEditMode) {
+                              <button
+                                type="button"
+                                class="icon-button"
+                                (click)="startEditingCell(row, 'totalInvested', $event)"
+                                aria-label="Editar total invertido"
+                              >
+                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                  <path
+                                    d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm17.71-10.04a1.003 1.003 0 0 0 0-1.42l-2.5-2.5a1.003 1.003 0 0 0-1.42 0l-1.96 1.96 3.75 3.75 2.13-1.79z"
+                                  />
+                                </svg>
+                              </button>
+                            }
+                          }
+                        </div>
+                        <span class="cell-meta">Peso: {{ row.investedWeight || '-' }}</span>
+                      </td>
+                      <td class="cell-market">
+                        <strong>{{ row.unitValue }}</strong>
+                        <span class="cell-meta">{{ row.marketDate }}</span>
+                      </td>
+                      <td class="cell-valuation">
+                        <strong>{{ row.totalValuation }}</strong>
+                        <span class="cell-meta">Peso: {{ row.valuationWeight || '-' }}</span>
+                      </td>
+                      <td class="cell-performance">
+                        <div class="cell-performance__content">
+                          <div>
+                            <span [class.negative]="row.totalReturnValue < 0" [class.positive]="row.totalReturnValue > 0">
+                              {{ row.totalReturn }}
+                            </span>
+                            <strong [class.negative]="row.profitEurosValue < 0" [class.positive]="row.profitEurosValue > 0">
+                              {{ row.profitEuros }}
+                            </strong>
+                          </div>
+
+                          @if (section.title === 'FONDOS' && isFundEditMode) {
+                            <button
+                              type="button"
+                              class="icon-button icon-button--danger"
+                              (click)="openDeleteFundModal(row, $event)"
+                              aria-label="Eliminar fondo"
+                            >
+                              <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M18 6 6 18M6 6l12 12" />
+                              </svg>
+                            </button>
+                          }
+                        </div>
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr>
+                      <td colspan="7" class="empty-row">No hay posiciones que cumplan los filtros actuales.</td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </article>
+        }
+      </section>
+    } @else {
+      <section class="insights-grid">
+        <article class="chart-card">
+          <header>
+            <p class="eyebrow">Resumen por tipo</p>
+            <h2>Distribucion de la cartera</h2>
+          </header>
+
+          <div class="chart-list">
+            @for (item of summaryByType; track item.label) {
+              <div class="chart-row">
+                <div class="chart-meta">
+                  <strong>{{ item.label }}</strong>
+                  <span>{{ item.formattedValue }} &middot; {{ formatPercentage(item.percentage) }}</span>
+                </div>
+                <div class="bar-track">
+                  <div class="bar-fill" [style.width]="getBarWidth(item)"></div>
+                </div>
+              </div>
+            }
+          </div>
+        </article>
+
+        <article class="chart-card">
+          <header>
+            <p class="eyebrow">Top activos</p>
+            <h2>Mayor peso por posicion</h2>
+          </header>
+
+          <div class="chart-list">
+            @for (item of summaryByAsset; track item.label + item.formattedValue) {
+              <div class="chart-row">
+                <div class="chart-meta">
+                  <strong>{{ item.label }}</strong>
+                  <span>{{ item.formattedValue }} &middot; {{ formatPercentage(item.percentage) }}</span>
+                </div>
+                <div class="bar-track bar-track--warm">
+                  <div class="bar-fill bar-fill--warm" [style.width]="getBarWidth(item)"></div>
+                </div>
+              </div>
+            }
+          </div>
+        </article>
+      </section>
+
+      <section class="portfolio-trend-card">
+        <div class="portfolio-trend-head">
+          <div>
+            <p class="eyebrow">Serie agregada</p>
+            <h2>Rentabilidad total</h2>
+          </div>
+          <div class="portfolio-trend-summary">
+            <strong [class.negative]="portfolioTrendSummaryValue < 0"
+                    [class.positive]="portfolioTrendSummaryValue > 0">
+              {{ formatPortfolioTrendValue(portfolioTrendSummaryValue) }}
+            </strong>
+            <span>{{ portfolioTrendSummaryDateLabel }}</span>
+          </div>
+        </div>
+
+        <div class="portfolio-trend-tabs">
+          @for (scope of portfolioTrendScopes; track scope.key) {
+            <button
+              type="button"
+              class="portfolio-trend-tab"
+              [class.portfolio-trend-tab--active]="selectedPortfolioTrendScope === scope.key"
+              (click)="setPortfolioTrendScope(scope.key)"
+            >
+              {{ scope.label }}
+            </button>
+          }
+        </div>
+
+        <div class="portfolio-trend-tabs">
+          @for (range of portfolioTrendRanges; track range.key) {
+            <button
+              type="button"
+              class="portfolio-trend-tab"
+              [class.portfolio-trend-tab--active]="selectedPortfolioTrendRange === range.key"
+              (click)="setPortfolioTrendRange(range.key)"
+            >
+              {{ range.label }}
+            </button>
+          }
+        </div>
+
+        @if (hasPortfolioTrend) {
+          <div class="portfolio-trend-chart-card">
+            <div class="portfolio-trend-axis portfolio-trend-axis--y">
+              <span class="portfolio-trend-axis-title">Rentabilidad en euros</span>
+              @for (tick of portfolioTrendYTicks; track tick) {
+                <span>{{ tick }}</span>
+              }
+            </div>
+            <div class="portfolio-trend-surface">
+              <div
+                class="portfolio-trend-hover-layer"
+                (mousemove)="onPortfolioTrendHover($event)"
+                (mouseleave)="onPortfolioTrendLeave()"
+              ></div>
+              <svg viewBox="0 0 100 100" preserveAspectRatio="none" class="portfolio-trend-line-chart">
+                <polyline [attr.points]="portfolioTrendPolylinePoints"></polyline>
+              </svg>
+              @if (portfolioTrendHoveredPoint) {
+                <div class="portfolio-trend-tooltip" [style.left.%]="portfolioTrendTooltipLeft" [style.top.%]="portfolioTrendTooltipTop">
+                  <span>{{ portfolioTrendSummaryDateLabel }}</span>
+                  <strong>{{ formatPortfolioTrendValue(portfolioTrendHoveredPoint.profitEuros) }}</strong>
+                </div>
+                <div
+                  class="portfolio-trend-marker"
+                  [style.left.%]="portfolioTrendHoveredPoint.x"
+                  [style.top.%]="portfolioTrendHoveredPoint.y"
+                ></div>
+              }
+            </div>
+          </div>
+          <div class="portfolio-trend-axis portfolio-trend-axis--x">
+            <span class="portfolio-trend-axis-title">Fecha</span>
+            <div class="portfolio-trend-axis-ticks">
+              @for (tick of portfolioTrendXTicks; track tick.label + tick.position) {
+                <span [style.left.%]="tick.position">{{ tick.label }}</span>
+              }
+            </div>
+          </div>
+        } @else {
+          <p class="portfolio-trend-empty">No hay historico suficiente para mostrar la serie con el filtro actual.</p>
+        }
+      </section>
+    }
+  }
+</main>
+
+@if (isAddFundModalOpen) {
+  <div class="modal-backdrop" (click)="closeAddFundModal()">
+    <section class="modal-card" (click)="$event.stopPropagation()">
+      <header class="modal-card__header">
+        <div>
+          <p class="eyebrow">Nuevo fondo</p>
+          <h2>Añadir fondo</h2>
+        </div>
+        <button type="button" class="modal-close" (click)="closeAddFundModal()" [disabled]="isCreatingFund" aria-label="Cerrar">
+          ×
+        </button>
+      </header>
+
+      <div class="modal-form">
+        <label class="field">
+          <span>Nombre del fondo</span>
+          <input
+            type="text"
+            [ngModel]="newFundForm.name"
+            (ngModelChange)="updateNewFundField('name', $event)"
+            [disabled]="isCreatingFund"
+          />
+        </label>
+
+        <label class="field">
+          <span>ISIN</span>
+          <input
+            type="text"
+            [ngModel]="newFundForm.isin"
+            (ngModelChange)="updateNewFundField('isin', $event)"
+            [disabled]="isCreatingFund"
+          />
+        </label>
+
+        <label class="field">
+          <span>Tipo</span>
+          <input
+            type="text"
+            [ngModel]="newFundForm.type"
+            (ngModelChange)="updateNewFundField('type', $event)"
+            [disabled]="isCreatingFund"
+          />
+        </label>
+
+        <label class="field">
+          <span>Moneda</span>
+          <input
+            type="text"
+            [ngModel]="newFundForm.currency"
+            (ngModelChange)="updateNewFundField('currency', $event)"
+            [disabled]="isCreatingFund"
+          />
+        </label>
+
+        <label class="field">
+          <span>Capital invertido</span>
+          <input
+            type="text"
+            [ngModel]="newFundForm.totalInvested"
+            (ngModelChange)="updateNewFundField('totalInvested', $event)"
+            [disabled]="isCreatingFund"
+          />
+        </label>
+
+        <label class="field">
+          <span>Número de participaciones</span>
+          <input
+            type="text"
+            [ngModel]="newFundForm.shares"
+            (ngModelChange)="updateNewFundField('shares', $event)"
+            [disabled]="isCreatingFund"
+          />
+        </label>
+      </div>
+
+      @if (createFundErrorMessage) {
+        <p class="modal-error">{{ createFundErrorMessage }}</p>
+      }
+
+      <footer class="modal-card__actions">
+        <button type="button" class="modal-button modal-button--ghost" (click)="closeAddFundModal()" [disabled]="isCreatingFund">
+          Cancelar
+        </button>
+        <button type="button" class="modal-button modal-button--primary" (click)="submitNewFund()" [disabled]="isCreatingFund">
+          {{ isCreatingFund ? 'Añadiendo...' : 'Añadir' }}
+        </button>
+      </footer>
+    </section>
+  </div>
+}
+
+@if (isDeleteFundModalOpen && fundPendingDeletion) {
+  <div class="modal-backdrop" (click)="closeDeleteFundModal()">
+    <section class="modal-card modal-card--confirm" (click)="$event.stopPropagation()">
+      <header class="modal-card__header">
+        <div>
+          <p class="eyebrow">Eliminar fondo</p>
+          <h2>¿Seguro que quieres eliminarlo?</h2>
+        </div>
+        <button type="button" class="modal-close" (click)="closeDeleteFundModal()" [disabled]="isDeletingFund" aria-label="Cerrar">
+          ×
+        </button>
+      </header>
+
+      <p class="modal-copy">
+        Se eliminará <strong>{{ fundPendingDeletion.name }}</strong> de la base de datos y la tabla se actualizará al momento.
+      </p>
+
+      @if (deleteFundErrorMessage) {
+        <p class="modal-error">{{ deleteFundErrorMessage }}</p>
+      }
+
+      <footer class="modal-card__actions">
+        <button type="button" class="modal-button modal-button--ghost" (click)="closeDeleteFundModal()" [disabled]="isDeletingFund">
+          Cancelar
+        </button>
+        <button type="button" class="modal-button modal-button--danger" (click)="confirmDeleteFund()" [disabled]="isDeletingFund">
+          {{ isDeletingFund ? 'Eliminando...' : 'Continuar' }}
+        </button>
+      </footer>
+    </section>
+  </div>
+}

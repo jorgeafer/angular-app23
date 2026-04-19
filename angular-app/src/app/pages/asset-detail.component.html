@@ -1,0 +1,385 @@
+<main class="detail-shell">
+  <a [routerLink]="backRoute" class="back-link">Volver a la cartera</a>
+
+  @if (isLoading) {
+    <section class="detail-card">
+      <h1>Cargando detalle</h1>
+      <p>Estamos recuperando la informacion del activo.</p>
+    </section>
+  } @else if (errorMessage) {
+    <section class="detail-card detail-card--error">
+      <h1>No disponible</h1>
+      <p>{{ errorMessage }}</p>
+    </section>
+  } @else if (asset) {
+    <section class="detail-hero">
+      <div>
+        <p class="eyebrow">{{ asset.section }}</p>
+        <h1>{{ asset.name }}</h1>
+        <p class="detail-copy">
+          Vista detallada de la posicion, con los principales datos de inversion,
+          valoracion y rentabilidad tomados de la hoja <strong>Cartera</strong>.
+        </p>
+      </div>
+
+      <div class="badge-group">
+        <span>{{ asset.type || 'Sin tipo' }}</span>
+        <span>{{ asset.currency || 'N/D' }}</span>
+        <span>{{ asset.marketDate }}</span>
+      </div>
+    </section>
+
+    <section class="metrics-grid">
+      <article class="metric-card">
+        <span>Total invertido</span>
+        <strong>{{ asset.totalInvested }}</strong>
+      </article>
+      <article class="metric-card">
+        <span>Valoracion total</span>
+        <strong>{{ asset.totalValuation }}</strong>
+      </article>
+      <article class="metric-card">
+        <span>Rentabilidad EUR</span>
+        <strong [class.negative]="asset.profitEurosValue < 0" [class.positive]="asset.profitEurosValue > 0">{{ asset.profitEuros }}</strong>
+      </article>
+      <article class="metric-card">
+        <span>Rentabilidad total</span>
+        <strong [class.negative]="asset.totalReturnValue < 0" [class.positive]="asset.totalReturnValue > 0">{{ asset.totalReturn }}</strong>
+      </article>
+    </section>
+
+    <section class="detail-grid">
+      <article class="detail-card">
+        <h2>Datos del instrumento</h2>
+        <dl class="detail-list">
+          <div><dt>Activo</dt><dd>{{ asset.name }}</dd></div>
+          <div><dt>ISIN</dt><dd>{{ asset.isin || '-' }}</dd></div>
+          <div><dt>Tipo</dt><dd>{{ asset.type || '-' }}</dd></div>
+          <div><dt>Moneda</dt><dd>{{ asset.currency || '-' }}</dd></div>
+          <div><dt>Fecha mercado</dt><dd>{{ asset.marketDate }}</dd></div>
+          <div><dt>Seccion</dt><dd>{{ asset.section }}</dd></div>
+        </dl>
+      </article>
+
+      <article class="detail-card">
+        <h2>Posicion y pesos</h2>
+        <dl class="detail-list">
+          <div><dt>Participaciones</dt><dd>{{ asset.shares }}</dd></div>
+          <div><dt>Valor unitario</dt><dd>{{ asset.unitValue }}</dd></div>
+          <div><dt>Peso invertido</dt><dd>{{ asset.investedWeight || '-' }}</dd></div>
+          <div><dt>Peso valoracion</dt><dd>{{ asset.valuationWeight || '-' }}</dd></div>
+          <div><dt>Total invertido</dt><dd>{{ asset.totalInvested }}</dd></div>
+          <div><dt>Valoracion total</dt><dd>{{ asset.totalValuation }}</dd></div>
+        </dl>
+      </article>
+    </section>
+
+    <section class="detail-card yahoo-card">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Yahoo Finance</p>
+          <h2>Informacion enriquecida</h2>
+        </div>
+        @if (yahooDetails?.assetType) {
+          <span class="pill">{{ yahooDetails?.assetType === 'fund' ? 'Fondo' : 'Accion' }}</span>
+        }
+      </div>
+
+      @if (yahooLoading) {
+        <div class="state-box">
+          <strong>Cargando Yahoo Finance</strong>
+          <p>Recuperando informacion financiera adicional del activo.</p>
+        </div>
+      } @else if (yahooError) {
+        <div class="state-box state-box--error">
+          <strong>No se pudo cargar Yahoo Finance</strong>
+          <p>{{ yahooError }}</p>
+        </div>
+      } @else if (yahooEmptyMessage) {
+        <div class="state-box">
+          <strong>Informacion no disponible</strong>
+          <p>{{ yahooEmptyMessage }}</p>
+        </div>
+      } @else if (hasYahooContent && yahooDetails) {
+        @if (yahooDetails.headlineMetrics.length) {
+          <section class="metrics-grid metrics-grid--embedded">
+            @for (metric of yahooDetails.headlineMetrics; track metric.label) {
+              <article class="metric-card">
+                <span>{{ metric.label }}</span>
+                <strong>{{ metric.value }}</strong>
+              </article>
+            }
+          </section>
+        }
+
+        <section class="detail-grid">
+          <article class="detail-card detail-card--nested">
+            <h2>Identificacion y clasificacion</h2>
+            <dl class="detail-list">
+              @for (item of yahooDetails.basicInfo; track item.label) {
+                <div><dt>{{ item.label }}</dt><dd>{{ item.value }}</dd></div>
+              } @empty {
+                <div><dt>Estado</dt><dd>No disponible</dd></div>
+              }
+            </dl>
+          </article>
+
+          <article class="detail-card detail-card--nested">
+            <h2>
+              {{ yahooDetails.assetType === 'fund' ? 'Composicion y analitica' : 'Valoracion y fundamentales' }}
+            </h2>
+            <dl class="detail-list">
+              @for (item of yahooDetails.analytics; track item.label) {
+                <div><dt>{{ item.label }}</dt><dd>{{ item.value }}</dd></div>
+              } @empty {
+                <div><dt>Estado</dt><dd>No disponible</dd></div>
+              }
+            </dl>
+          </article>
+        </section>
+
+        @if (yahooDetails.trailingReturns.length || (yahooDetails.assetType === 'equity' && yahooDetails.extraMetrics.length)) {
+          <section class="detail-grid">
+            @if (yahooDetails.trailingReturns.length) {
+              <article class="detail-card detail-card--nested">
+                <h2>Rentabilidades acumuladas</h2>
+                <dl class="detail-list">
+                  @for (item of yahooDetails.trailingReturns; track item.label) {
+                    <div><dt>{{ item.label }}</dt><dd>{{ item.value }}</dd></div>
+                  }
+                </dl>
+              </article>
+            }
+
+            @if (yahooDetails.assetType === 'equity' && yahooDetails.extraMetrics.length) {
+              <article class="detail-card detail-card--nested">
+                <h2>Metricas adicionales</h2>
+                <dl class="detail-list">
+                  @for (item of yahooDetails.extraMetrics; track item.label) {
+                    <div><dt>{{ item.label }}</dt><dd>{{ item.value }}</dd></div>
+                  }
+                </dl>
+              </article>
+            }
+          </section>
+        }
+
+        @if (yahooFundDetails && hasFundEnhancements) {
+          <section class="fund-grid fund-grid--cards">
+            @if (yahooFundDetails.riskIndicator) {
+              <article class="detail-card">
+                <div class="subsection-head">
+                  <div>
+                    <p class="eyebrow">Riesgo</p>
+                    <h2>Indicador del fondo</h2>
+                  </div>
+                  @if (yahooFundDetails.riskIndicator.label) {
+                    <span class="pill">{{ yahooFundDetails.riskIndicator.label }}</span>
+                  }
+                </div>
+
+                <div class="risk-score">
+                  @for (dot of riskScoreDots; track dot) {
+                    <span class="risk-dot" [class.risk-dot--active]="isRiskDotActive(dot)"></span>
+                  }
+                </div>
+
+                <dl class="detail-list">
+                  @for (item of yahooFundDetails.riskIndicator.stats; track item.label) {
+                    <div><dt>{{ item.label }}</dt><dd>{{ item.value }}</dd></div>
+                  }
+                </dl>
+              </article>
+            }
+
+            @if (yahooFundDetails.topHoldings.length) {
+              <article class="detail-card">
+                <div class="subsection-head">
+                  <div>
+                    <p class="eyebrow">Top 10</p>
+                    <h2>Posiciones en cartera</h2>
+                  </div>
+                </div>
+
+                <div class="table-wrap">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>Posicion</th>
+                        <th>Peso</th>
+                        <th>Marca visual</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (holding of yahooFundDetails.topHoldings; track holding.name) {
+                        <tr>
+                          <td>
+                            <strong>{{ holding.name }}</strong>
+                            <span>{{ holding.symbol || holding.geography || 'Sin ticker' }}</span>
+                          </td>
+                          <td>{{ holding.weightLabel }}</td>
+                          <td>
+                            <div class="weight-bar">
+                              <span [style.width.%]="holding.weight"></span>
+                            </div>
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </article>
+            }
+          </section>
+
+          <section class="fund-grid">
+            @if (yahooFundDetails.geographicExposure.length) {
+              <article class="detail-card">
+                <div class="subsection-head">
+                  <div>
+                    <p class="eyebrow">Geografia</p>
+                    <h2>Distribucion de la cartera</h2>
+                  </div>
+                </div>
+
+                <div class="geography-layout">
+                  <div
+                    class="pie-chart-wrap"
+                    (mousemove)="onGeographyHover($event)"
+                    (mouseleave)="onGeographyLeave()"
+                  >
+                    <div class="pie-chart" [style.background]="geographyGradient"></div>
+                    @if (hoveredGeography) {
+                      <div class="pie-tooltip">
+                        <span>{{ hoveredGeography.label }}</span>
+                        <strong>{{ hoveredGeography.weightLabel }}</strong>
+                      </div>
+                    }
+                  </div>
+
+                  <div class="table-wrap">
+                    <table class="data-table">
+                      <thead>
+                        <tr>
+                          <th>Zona</th>
+                          <th>Peso</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        @for (item of yahooFundDetails.geographicExposure; track item.label) {
+                          <tr>
+                            <td>
+                              <span class="legend-label">
+                                <span class="legend-dot" [style.background]="item.color"></span>
+                                {{ item.label }}
+                              </span>
+                            </td>
+                            <td>{{ item.weightLabel }}</td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </article>
+            }
+
+            @if (yahooFundDetails.annualReturns.length) {
+              <article class="detail-card">
+                <div class="subsection-head">
+                  <div>
+                    <p class="eyebrow">Historico</p>
+                    <h2>Rentabilidad anual</h2>
+                  </div>
+                </div>
+
+                <div class="table-wrap">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <th>Periodo</th>
+                        <th>Rentabilidad</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (item of yahooFundDetails.annualReturns; track item.label) {
+                        <tr [class.row-highlight]="item.isYtd">
+                          <td>{{ item.label }}</td>
+                          <td [class.negative]="item.value < 0" [class.positive]="item.value > 0">{{ item.valueLabel }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </article>
+            }
+          </section>
+
+          @if (yahooFundDetails.dailyPerformance.length > 1) {
+            <section class="detail-card">
+              <div class="subsection-head">
+                <div>
+                  <p class="eyebrow">Serie diaria</p>
+                  <h2>Valor liquidativo</h2>
+                </div>
+                <div class="chart-summary">
+                  <strong>{{ chartValueLabel }}</strong>
+                  <span>{{ chartDateRangeLabel }}</span>
+                </div>
+              </div>
+
+              <div class="range-tabs">
+                @for (range of chartRanges; track range.key) {
+                  <button
+                    type="button"
+                    class="range-tab"
+                    [class.range-tab--active]="selectedChartRange === range.key"
+                    (click)="setChartRange(range.key)"
+                  >
+                    {{ range.label }}
+                  </button>
+                }
+              </div>
+
+              @if (filteredChartPoints.length > 1) {
+                <div class="chart-card">
+                  <div class="chart-axis chart-axis--y">
+                    <span class="axis-title">VL en euros</span>
+                    @for (tick of chartYTicks; track tick) {
+                      <span>{{ tick }}</span>
+                    }
+                  </div>
+                  <div class="chart-surface">
+                    <div
+                      class="chart-hover-layer"
+                      (mousemove)="onChartHover($event)"
+                      (mouseleave)="onChartLeave()"
+                    ></div>
+                    <svg viewBox="0 0 100 100" preserveAspectRatio="none" class="line-chart">
+                      <polyline [attr.points]="chartPolylinePoints"></polyline>
+                    </svg>
+                    @if (hoveredChartPoint) {
+                      <div class="chart-tooltip" [style.left.%]="chartTooltipLeft" [style.top.%]="chartTooltipTop">
+                        <span>{{ formatTooltipDate(hoveredChartPoint.date) }}</span>
+                        <strong>{{ formatTooltipValue(hoveredChartPoint.close) }}</strong>
+                      </div>
+                      <div class="chart-marker" [style.left.%]="hoveredChartPoint.x" [style.top.%]="hoveredChartPoint.y"></div>
+                    }
+                  </div>
+                </div>
+                <div class="chart-axis chart-axis--x">
+                  <span class="axis-title">Fecha</span>
+                  <div class="chart-axis-ticks">
+                    @for (tick of chartXTicks; track tick.label + tick.position) {
+                      <span [style.left.%]="tick.position">{{ tick.label }}</span>
+                    }
+                  </div>
+                </div>
+              }
+            </section>
+          }
+        }
+      }
+    </section>
+  }
+</main>

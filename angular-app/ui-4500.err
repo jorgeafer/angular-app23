@@ -1,0 +1,14 @@
+[1m[33mComponent HMR has been enabled, see https://angular.dev/hmr for more info.[39m[22m
+[1m[31m[31mX [41;31m[[41;97mERROR[41;31m][0m [1mTS2551: Property 'resolveNumericDigits' does not exist on type 'PortfolioHomeComponent'. Did you mean 'resolveUnitDigits'?[0m [1m[35m[plugin angular-compiler][0m
+
+    src/app/pages/portfolio-home.component.ts:306:31:
+[37m      306 │     const currentDigits = this.[32mresolveNumericDigits[37m(row.unitValue);
+          ╵                                [32m~~~~~~~~~~~~~~~~~~~~[0m
+
+  'resolveUnitDigits' is declared here.
+
+    src/app/pages/portfolio-home.component.ts:305:10:
+[37m      305 │   private [32mresolveUnitDigits[37m(row: PortfolioRow, unitValueNumber: n...
+          ╵           [32m~~~~~~~~~~~~~~~~~[0m
+
+[39m[22m

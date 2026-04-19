@@ -1,0 +1,10 @@
+@if (showLogout()) {
+  <button type="button" class="app-logout" (click)="logout()">
+    Cerrar sesion
+    @if (username()) {
+      <span> · {{ username() }}</span>
+    }
+  </button>
+}
+
+<router-outlet />

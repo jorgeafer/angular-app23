@@ -1,0 +1,43 @@
+<section class="login-page">
+  <div class="login-page__panel">
+    <div class="login-page__copy">
+      <span class="login-page__eyebrow">Acceso privado</span>
+      <h1>Inicia sesion para ver la cartera</h1>
+      <p>
+        La aplicacion esta protegida y solo permite acceder con usuario y contrasena validos.
+      </p>
+    </div>
+
+    <form class="login-form" (ngSubmit)="submit()">
+      <label class="login-form__field">
+        <span>Usuario</span>
+        <input
+          type="text"
+          name="username"
+          [(ngModel)]="username"
+          autocomplete="username"
+          placeholder="Tu usuario"
+        />
+      </label>
+
+      <label class="login-form__field">
+        <span>Contrasena</span>
+        <input
+          type="password"
+          name="password"
+          [(ngModel)]="password"
+          autocomplete="current-password"
+          placeholder="Tu contrasena"
+        />
+      </label>
+
+      @if (errorMessage) {
+        <p class="login-form__error">{{ errorMessage }}</p>
+      }
+
+      <button type="submit" [disabled]="isSubmitting">
+        {{ isSubmitting ? 'Entrando...' : 'Entrar' }}
+      </button>
+    </form>
+  </div>
+</section>

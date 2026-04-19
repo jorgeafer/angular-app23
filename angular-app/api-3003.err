@@ -1,0 +1,8 @@
+En l¡nea: 1 Car cter: 10
++ ='true'; 3003='3003'; npm run start:api
++          ~~~~
+La expresi¢n de asignaci¢n no es v lida. La entrada de un operador de asignaci¢n debe ser un objeto que pueda aceptar 
+asignaciones, como una variable o una propiedad.
+    + CategoryInfo          : ParserError: (:) [], ParentContainsErrorRecordException
+    + FullyQualifiedErrorId : InvalidLeftHandSide
+ 
