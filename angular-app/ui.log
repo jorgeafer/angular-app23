@@ -1,5 +1,0 @@
-
-> angular-app@0.0.0 start:ui
-> ng serve --proxy-config proxy.conf.json
-
-[33m>[39m Building...
