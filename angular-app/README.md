@@ -138,3 +138,30 @@ npm run build
 ```bash
 npm test
 ```
+
+## Deploy automatico a AWS
+
+El repositorio incluye un workflow de GitHub Actions en `.github/workflows/deploy-main.yml`.
+
+Cada push a `main`:
+
+- conecta por SSH a la EC2
+- hace `git pull`
+- ejecuta `npm ci`
+- ejecuta `npm run build`
+- reinicia `pm2`
+- recarga `nginx`
+
+Configura en GitHub antes de activarlo:
+
+- secret `EC2_HOST`
+- secret `EC2_USER`
+- secret `EC2_SSH_PRIVATE_KEY`
+- secret `EC2_HOST_FINGERPRINT`
+- variable `EC2_APP_DIR`
+
+Valor esperado de `EC2_APP_DIR` en tu despliegue actual:
+
+```bash
+/home/ubuntu/angular-app23
+```
