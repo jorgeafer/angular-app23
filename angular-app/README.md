@@ -1,4 +1,4 @@
-# AngularApp
+# MiCartera
 
 Aplicacion Angular para visualizar una cartera financiera desde Excel y enriquecer la ficha de detalle con datos Morningstar a traves de un backend interno.
 
