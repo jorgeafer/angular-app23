@@ -216,6 +216,7 @@ dd {
 .table-wrap {
   overflow-x: auto;
   margin-top: 12px;
+  -webkit-overflow-scrolling: touch;
 }
 
 .data-table {
@@ -479,6 +480,7 @@ dd {
   z-index: 12;
   transform: translate(-50%, calc(-100% - 12px));
   min-width: 132px;
+  max-width: 180px;
   padding: 10px 12px;
   border-radius: 14px;
   border: 1px solid rgba(34, 49, 63, 0.12);
@@ -486,7 +488,7 @@ dd {
   box-shadow: 0 14px 30px rgba(34, 49, 63, 0.18);
   pointer-events: none;
   backdrop-filter: blur(8px);
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .chart-tooltip span {
@@ -522,12 +524,15 @@ dd {
 
 @media (max-width: 960px) {
   .detail-hero,
-  .metrics-grid,
   .detail-grid,
   .fund-grid,
   .geography-layout,
   .chart-card {
     grid-template-columns: 1fr;
+  }
+
+  .metrics-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .section-head,
@@ -551,14 +556,70 @@ dd {
 
 @media (max-width: 640px) {
   .detail-shell {
+    padding-top: 72px;
     padding-inline: 16px;
+  }
+
+  .badge-group span {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .metric-card,
+  .detail-card {
+    padding: 14px 16px;
   }
 
   .pie-chart {
     width: 160px;
   }
 
+  .pie-chart-wrap {
+    width: 100%;
+  }
+
   .risk-dot {
     width: 100%;
+  }
+
+  .chart-card {
+    padding: 10px;
+  }
+
+  .chart-axis--y {
+    min-width: 0;
+  }
+
+  .chart-axis-ticks {
+    font-size: 0.74rem;
+  }
+
+  .chart-axis-ticks span {
+    max-width: 82px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+@media (max-width: 480px) {
+  .detail-shell {
+    padding-inline: 12px;
+    padding-bottom: 28px;
+  }
+
+  .metrics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-copy,
+  .metric-card span,
+  dt,
+  .data-table td span {
+    font-size: 0.8rem;
+  }
+
+  .chart-surface {
+    min-height: 200px;
   }
 }

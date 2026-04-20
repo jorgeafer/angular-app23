@@ -24,3 +24,15 @@
   border-color: rgba(11, 122, 117, 0.3);
   color: #0b7a75;
 }
+
+@media (max-width: 640px) {
+  .app-logout {
+    top: 12px;
+    right: 12px;
+    left: 12px;
+    width: auto;
+    justify-content: center;
+    padding-block: 12px;
+    font-size: 0.85rem;
+  }
+}

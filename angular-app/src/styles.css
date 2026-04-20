@@ -31,6 +31,7 @@ html {
 body {
   margin: 0;
   min-width: 320px;
+  overflow-x: hidden;
   background:
     radial-gradient(circle at top left, rgba(11, 122, 117, 0.09), transparent 24%),
     linear-gradient(180deg, #fbfaf8 0%, var(--app-bg) 100%);
@@ -79,4 +80,10 @@ a {
 
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(34, 49, 63, 0.38);
+}
+
+img,
+svg,
+canvas {
+  max-width: 100%;
 }
