@@ -15,6 +15,13 @@ class PortfolioImportService {
   }
 
   async syncFromExcelIfNeeded(force = false) {
+    if (!this.hasWorkbook()) {
+      return {
+        imported: false,
+        sourceMissing: true
+      };
+    }
+
     const stat = fs.statSync(this.workbookPath);
     const sourceMtime = String(stat.mtimeMs);
     const storedMtime = await this.repository.getMetadata('source_mtime_ms');
@@ -44,6 +51,10 @@ class PortfolioImportService {
     await this.repository.setMetadata('last_imported_at', new Date().toISOString());
 
     return { imported: true, positions: dataset.rows.length };
+  }
+
+  hasWorkbook() {
+    return fs.existsSync(this.workbookPath);
   }
 
   readWorkbook() {
