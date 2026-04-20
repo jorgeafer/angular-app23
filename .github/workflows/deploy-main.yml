@@ -24,7 +24,6 @@ jobs:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
-          fingerprint: ${{ secrets.EC2_HOST_FINGERPRINT }}
           envs: GIT_BRANCH,APP_DIR
           script: |
             set -e
