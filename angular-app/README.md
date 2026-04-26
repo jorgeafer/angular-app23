@@ -139,6 +139,21 @@ npm run build
 npm test
 ```
 
+## Reinicio local
+
+En Windows puedes reiniciar backend y frontend con una sola orden:
+
+```bash
+npm run restart:local
+```
+
+Ese script:
+
+- libera los puertos `3000` y `4200`
+- aparta un posible `portfolio.db-journal` atascado
+- arranca API y UI otra vez
+- valida que ambos endpoints respondan
+
 ## Deploy automatico a AWS
 
 El repositorio incluye un workflow de GitHub Actions en `.github/workflows/deploy-main.yml`.
