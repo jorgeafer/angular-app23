@@ -135,6 +135,79 @@ dt {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
+.operations-card {
+  margin-top: 16px;
+}
+
+.operations-head-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.operations-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.operation-action {
+  min-height: 36px;
+  padding-inline: 12px;
+}
+
+.operation-action--danger {
+  color: var(--error);
+}
+
+.operations-form {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.operations-form__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.operations-form__notes {
+  grid-column: 1 / -1;
+}
+
+.operations-form__summary {
+  margin-top: 14px;
+}
+
+.operations-form__summary span,
+.operations-form__summary strong {
+  display: block;
+}
+
+.operations-form__summary span {
+  color: var(--muted);
+  font-size: 0.88rem;
+}
+
+.operations-form__summary strong {
+  margin-top: 4px;
+  font-size: 1.12rem;
+}
+
+.operations-form__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.operations-feedback {
+  margin-top: 14px;
+}
+
 .fund-grid--cards {
   margin-top: 16px;
 }
@@ -171,7 +244,6 @@ dt {
 
 .state-box {
   margin-top: 14px;
-  padding: 14px 16px;
   border-radius: 18px;
   border: 1px dashed var(--line);
   background: rgba(255, 255, 255, 0.68);
@@ -551,6 +623,10 @@ dd {
 
   dd {
     text-align: left;
+  }
+
+  .operations-form__grid {
+    grid-template-columns: 1fr;
   }
 }
 

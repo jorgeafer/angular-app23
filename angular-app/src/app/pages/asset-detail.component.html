@@ -2,12 +2,12 @@
   <a [routerLink]="backRoute" class="back-link">Volver a la cartera</a>
 
   @if (isLoading) {
-    <section class="detail-card">
+    <section class="detail-card app-surface app-status-card">
       <h1>Cargando detalle</h1>
       <p>Estamos recuperando la informacion del activo.</p>
     </section>
   } @else if (errorMessage) {
-    <section class="detail-card detail-card--error">
+    <section class="detail-card detail-card--error app-surface app-status-card app-status-card--error">
       <h1>No disponible</h1>
       <p>{{ errorMessage }}</p>
     </section>
@@ -74,6 +74,143 @@
       </article>
     </section>
 
+    <section class="detail-card operations-card">
+      <div class="section-head">
+        <div>
+          <p class="eyebrow">Operaciones</p>
+          <h2>Historial de movimientos</h2>
+        </div>
+        @if (canManageOperations) {
+          <div class="operations-head-actions">
+            @if (isOperationFormVisible) {
+              <span class="pill">{{ editingOperationId ? 'Editando movimiento' : 'Nuevo movimiento' }}</span>
+            }
+            <button type="button" class="app-button-secondary operation-action" (click)="openOperationForm()" [disabled]="isSavingOperation">
+              Nuevo movimiento
+            </button>
+          </div>
+        }
+      </div>
+
+      @if (operationsLoading) {
+        <div class="state-box app-message app-message--info">
+          <strong>Cargando movimientos</strong>
+          <p>Estamos recuperando el historial de operaciones del activo.</p>
+        </div>
+      } @else {
+        <div class="table-wrap">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Tipo</th>
+                <th>Cantidad</th>
+                <th>Precio</th>
+                <th>Importe</th>
+                <th>Comision</th>
+                <th>Notas</th>
+                @if (canManageOperations) {
+                  <th>Acciones</th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (operation of operations; track operation.id) {
+                <tr>
+                  <td>{{ operation.operationDate }}</td>
+                  <td>{{ operation.operationType === 'buy' ? 'Compra' : operation.operationType === 'sell' ? 'Venta' : operation.operationType === 'dividend' ? 'Dividendo' : 'Comision' }}</td>
+                  <td>{{ operation.quantity ?? '-' }}</td>
+                  <td>{{ operation.unitPrice ?? '-' }}</td>
+                  <td>{{ operation.amount ?? '-' }}</td>
+                  <td>{{ operation.feeAmount ?? '-' }}</td>
+                  <td>{{ operation.notes || '-' }}</td>
+                  @if (canManageOperations) {
+                    <td class="operations-actions">
+                      <button type="button" class="app-button-secondary operation-action" (click)="startEditOperation(operation)" [disabled]="isSavingOperation">Editar</button>
+                      <button type="button" class="app-button-secondary operation-action operation-action--danger" (click)="deleteOperation(operation)" [disabled]="isSavingOperation">Borrar</button>
+                    </td>
+                  }
+                </tr>
+              } @empty {
+                <tr>
+                  <td [attr.colspan]="canManageOperations ? 8 : 7">No hay movimientos registrados para este activo.</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        @if (operationsError) {
+          <p class="app-message app-message--error operations-feedback">{{ operationsError }}</p>
+        }
+
+        @if (canManageOperations && isOperationFormVisible) {
+          <div class="operations-form">
+            <div class="operations-form__grid">
+              <label class="app-form-field">
+                <span>Tipo</span>
+                <select class="app-select" [(ngModel)]="operationForm.operationType" [disabled]="isSavingOperation">
+                  @for (option of operationTypeOptions; track option.key) {
+                    <option [value]="option.key">{{ option.label }}</option>
+                  }
+                </select>
+              </label>
+
+              <label class="app-form-field">
+                <span>Fecha</span>
+                <input class="app-input" type="date" [(ngModel)]="operationForm.operationDate" [disabled]="isSavingOperation" />
+              </label>
+
+              @if (operationForm.operationType === 'buy' || operationForm.operationType === 'sell') {
+                <label class="app-form-field">
+                  <span>Cantidad</span>
+                  <input class="app-input" type="text" [(ngModel)]="operationForm.quantity" [disabled]="isSavingOperation" />
+                </label>
+
+                <label class="app-form-field">
+                  <span>Precio unitario</span>
+                  <input class="app-input" type="text" [(ngModel)]="operationForm.unitPrice" [disabled]="isSavingOperation" />
+                </label>
+              } @else {
+                <label class="app-form-field">
+                  <span>{{ operationAmountLabel }}</span>
+                  <input class="app-input" type="text" [(ngModel)]="operationForm.amount" [disabled]="isSavingOperation" />
+                </label>
+              }
+
+              <label class="app-form-field">
+                <span>Comision</span>
+                <input class="app-input" type="text" [(ngModel)]="operationForm.feeAmount" [disabled]="isSavingOperation" />
+              </label>
+
+              <label class="app-form-field operations-form__notes">
+                <span>Notas</span>
+                <textarea class="app-textarea" [(ngModel)]="operationForm.notes" [disabled]="isSavingOperation"></textarea>
+              </label>
+            </div>
+
+            <div class="operations-form__summary">
+              <span>Importe del movimiento</span>
+              <strong>{{ operationGrossAmountPreview }}</strong>
+            </div>
+
+            @if (operationFormError) {
+              <p class="app-message app-message--error operations-feedback">{{ operationFormError }}</p>
+            }
+
+            <div class="operations-form__actions">
+              <button type="button" class="app-button-primary" (click)="submitOperation()" [disabled]="isSavingOperation">
+                {{ editingOperationId ? 'Guardar cambios' : 'Registrar movimiento' }}
+              </button>
+              <button type="button" class="app-button-secondary" (click)="cancelEditOperation()" [disabled]="isSavingOperation">
+                {{ editingOperationId ? 'Cancelar edicion' : 'Cerrar formulario' }}
+              </button>
+            </div>
+          </div>
+        }
+      }
+    </section>
+
     <section class="detail-card yahoo-card">
       <div class="section-head">
         <div>
@@ -86,17 +223,17 @@
       </div>
 
       @if (yahooLoading) {
-        <div class="state-box">
+        <div class="state-box app-message app-message--info">
           <strong>Cargando Yahoo Finance</strong>
           <p>Recuperando informacion financiera adicional del activo.</p>
         </div>
       } @else if (yahooError) {
-        <div class="state-box state-box--error">
+        <div class="state-box state-box--error app-message app-message--error">
           <strong>No se pudo cargar Yahoo Finance</strong>
           <p>{{ yahooError }}</p>
         </div>
       } @else if (yahooEmptyMessage) {
-        <div class="state-box">
+        <div class="state-box app-message app-message--info">
           <strong>Informacion no disponible</strong>
           <p>{{ yahooEmptyMessage }}</p>
         </div>

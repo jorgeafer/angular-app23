@@ -87,3 +87,131 @@ svg,
 canvas {
   max-width: 100%;
 }
+
+.app-surface {
+  border: 1px solid var(--app-line);
+  border-radius: 24px;
+  background: var(--app-surface);
+  box-shadow: var(--app-shadow);
+}
+
+.app-status-card {
+  padding: 24px;
+}
+
+.app-status-card h1,
+.app-status-card h2,
+.app-status-card p {
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 40rem;
+  text-align: center;
+}
+
+.app-status-card p {
+  color: var(--app-muted);
+  line-height: 1.6;
+}
+
+.app-status-card--error {
+  border-color: rgba(180, 35, 24, 0.22);
+  background: linear-gradient(180deg, rgba(180, 35, 24, 0.06), rgba(255, 255, 255, 0.96));
+}
+
+.app-form-field {
+  display: grid;
+  gap: 8px;
+}
+
+.app-form-field > span,
+.app-form-label {
+  color: var(--app-muted);
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.app-input,
+.app-select,
+.app-textarea {
+  width: 100%;
+  min-height: 46px;
+  padding: 0 14px;
+  border: 1px solid var(--app-line);
+  border-radius: 14px;
+  background: #fff;
+  color: var(--app-ink);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.app-textarea {
+  min-height: 112px;
+  padding-top: 12px;
+  padding-bottom: 12px;
+  resize: vertical;
+}
+
+.app-input:focus,
+.app-select:focus,
+.app-textarea:focus {
+  outline: none;
+  border-color: rgba(11, 122, 117, 0.38);
+  box-shadow: 0 0 0 4px rgba(11, 122, 117, 0.11);
+}
+
+.app-message {
+  padding: 12px 14px;
+  border: 1px solid transparent;
+  border-radius: 14px;
+  line-height: 1.5;
+}
+
+.app-message--info {
+  border-color: rgba(11, 122, 117, 0.18);
+  background: rgba(11, 122, 117, 0.06);
+  color: #21555b;
+}
+
+.app-message--error {
+  border-color: rgba(180, 35, 24, 0.18);
+  background: rgba(180, 35, 24, 0.08);
+  color: var(--app-negative);
+}
+
+.app-button-primary,
+.app-button-secondary {
+  min-height: 46px;
+  padding: 0 16px;
+  border-radius: 14px;
+  font-weight: 700;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+}
+
+.app-button-primary {
+  border: 0;
+  background: linear-gradient(135deg, #0b7a75, #146a86);
+  color: #f9fffd;
+  box-shadow: 0 16px 32px rgba(20, 106, 134, 0.2);
+}
+
+.app-button-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 18px 36px rgba(20, 106, 134, 0.24);
+}
+
+.app-button-secondary {
+  border: 1px solid rgba(34, 49, 63, 0.12);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--app-ink);
+}
+
+.app-button-secondary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(11, 122, 117, 0.22);
+  color: var(--app-accent);
+}
+
+.app-button-primary:disabled,
+.app-button-secondary:disabled {
+  opacity: 0.7;
+  cursor: wait;
+}

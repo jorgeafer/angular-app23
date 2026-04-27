@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { firstValueFrom, map } from 'rxjs';
-import { CreateFundPayload, EditablePortfolioField, PortfolioDataset, PortfolioRow, PortfolioSection } from '../models/portfolio.models';
+import { CreateFundPayload, EditablePortfolioField, PortfolioDataset, PortfolioOperation, PortfolioOperationPayload, PortfolioRow, PortfolioSection } from '../models/portfolio.models';
 import {
   formatDateEs,
   normalizeCurrencyString,
@@ -84,6 +84,59 @@ export class PortfolioDataService {
     this.datasetPromises.clear();
   }
 
+  getAssetOperations(id: string, portfolioKey = 'main'): Promise<PortfolioOperation[]> {
+    return firstValueFrom(
+      this.http
+        .get<PortfolioOperation[]>(`${this.getBaseUrl(portfolioKey)}/assets/${encodeURIComponent(id)}/operations`)
+        .pipe(map((operations) => operations.map((operation) => this.mapOperation(operation))))
+    );
+  }
+
+  async createAssetOperation(
+    id: string,
+    payload: PortfolioOperationPayload,
+    portfolioKey = 'main'
+  ): Promise<PortfolioOperation[]> {
+    const operations = await firstValueFrom(
+      this.http
+        .post<PortfolioOperation[]>(`${this.getBaseUrl(portfolioKey)}/assets/${encodeURIComponent(id)}/operations`, payload)
+        .pipe(map((items) => items.map((operation) => this.mapOperation(operation))))
+    );
+
+    this.datasetPromises.clear();
+    return operations;
+  }
+
+  async updateAssetOperation(
+    id: string,
+    operationId: string,
+    payload: PortfolioOperationPayload,
+    portfolioKey = 'main'
+  ): Promise<PortfolioOperation[]> {
+    const operations = await firstValueFrom(
+      this.http
+        .patch<PortfolioOperation[]>(
+          `${this.getBaseUrl(portfolioKey)}/assets/${encodeURIComponent(id)}/operations/${encodeURIComponent(operationId)}`,
+          payload
+        )
+        .pipe(map((items) => items.map((operation) => this.mapOperation(operation))))
+    );
+
+    this.datasetPromises.clear();
+    return operations;
+  }
+
+  async deleteAssetOperation(id: string, operationId: string, portfolioKey = 'main'): Promise<PortfolioOperation[]> {
+    const operations = await firstValueFrom(
+      this.http
+        .delete<PortfolioOperation[]>(`${this.getBaseUrl(portfolioKey)}/assets/${encodeURIComponent(id)}/operations/${encodeURIComponent(operationId)}`)
+        .pipe(map((items) => items.map((operation) => this.mapOperation(operation))))
+    );
+
+    this.datasetPromises.clear();
+    return operations;
+  }
+
   private getBaseUrl(portfolioKey: string): string {
     return portfolioKey === 'deva' ? '/api/deva-portfolio' : '/api/portfolio';
   }
@@ -96,8 +149,24 @@ export class PortfolioDataService {
     return {
       ...dataset,
       lastUpdated: formatDateEs(dataset.lastUpdated),
+      lastImportedAt: dataset.lastImportedAt ? formatDateEs(dataset.lastImportedAt.slice(0, 10)) : dataset.lastImportedAt,
       sections: dataset.sections.map((section) => this.mapSection(section)),
-      rows: dataset.rows.map((row) => this.mapRow(row))
+      rows: dataset.rows.map((row) => this.mapRow(row)),
+      summaryBySector: dataset.summaryBySector.map((item) => ({ ...item })),
+      summaryByCountry: dataset.summaryByCountry.map((item) => ({ ...item })),
+      summaryByManager: dataset.summaryByManager.map((item) => ({ ...item })),
+      summaryByCurrency: dataset.summaryByCurrency.map((item) => ({ ...item })),
+      summaryByClass: dataset.summaryByClass.map((item) => ({ ...item })),
+      alerts: dataset.alerts.map((item) => ({ ...item })),
+      benchmarkOverview: dataset.benchmarkOverview
+        ? {
+            ...dataset.benchmarkOverview,
+            series: (dataset.benchmarkOverview.series ?? []).map((item) => ({ ...item })),
+            snapshots: dataset.benchmarkOverview.snapshots.map((item) => ({ ...item }))
+          }
+        : null,
+      analytics: { ...dataset.analytics },
+      quality: { ...dataset.quality }
     };
   }
 
@@ -130,7 +199,20 @@ export class PortfolioDataService {
       totalValuation: normalizeCurrencyString(row.totalValuation),
       profitEuros: normalizeCurrencyString(row.profitEuros),
       valuationWeight: normalizePercentString(row.valuationWeight),
-      totalReturn: normalizePercentString(row.totalReturn)
+      totalReturn: normalizePercentString(row.totalReturn),
+      averageCost: normalizeCurrencyString(row.averageCost ?? ''),
+      annualizedReturn: normalizePercentString(row.annualizedReturn ?? ''),
+      contribution: normalizePercentString(row.contribution ?? ''),
+      qualityIssues: [...(row.qualityIssues ?? [])]
+    };
+  }
+
+  private mapOperation(operation: PortfolioOperation): PortfolioOperation {
+    return {
+      ...operation,
+      operationDate: formatDateEs(operation.operationDate),
+      createdAt: operation.createdAt ? formatDateEs(operation.createdAt.slice(0, 10)) : operation.createdAt,
+      updatedAt: operation.updatedAt ? formatDateEs(operation.updatedAt.slice(0, 10)) : operation.updatedAt
     };
   }
 

@@ -62,6 +62,42 @@ function createPortfolioRouter({
     }
   });
 
+  router.get('/assets/:id/operations', async (req, res, next) => {
+    try {
+      const operations = await queryService.getAssetOperations(req.params.id);
+      res.json(operations);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.post('/assets/:id/operations', async (req, res, next) => {
+    try {
+      const operations = await queryService.createAssetOperation(req.params.id, req.body);
+      res.status(201).json(operations);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.patch('/assets/:id/operations/:operationId', async (req, res, next) => {
+    try {
+      const operations = await queryService.updateAssetOperation(req.params.id, req.params.operationId, req.body);
+      res.json(operations);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  router.delete('/assets/:id/operations/:operationId', async (req, res, next) => {
+    try {
+      const operations = await queryService.deleteAssetOperation(req.params.id, req.params.operationId);
+      res.json(operations);
+    } catch (error) {
+      next(error);
+    }
+  });
+
   if (enableImport && importService) {
     router.post('/import', async (_req, res, next) => {
       try {

@@ -44,6 +44,8 @@ class YahooFinanceProvider {
       name: resolved.searchHit?.longname || quote.longName || quote.shortName,
       isin: request.idType === 'isin' ? request.id : undefined,
       category: summary?.fundProfile?.categoryName || summary?.defaultKeyStatistics?.category || undefined,
+      family: summary?.fundProfile?.family || undefined,
+      country: summary?.summaryProfile?.country || undefined,
       nav: latestPoint?.close ?? quote.regularMarketPrice ?? undefined,
       navDate: latestPoint?.date ?? toDateString(quote.regularMarketTime),
       dailyPerformance
@@ -100,6 +102,11 @@ class YahooFinanceProvider {
     } catch {
       return null;
     }
+  }
+
+  async getMarketSeries(symbol) {
+    const chart = await this.fetchDailyChart(symbol);
+    return this.buildDailyPerformance(chart?.quotes);
   }
 
   async normalizeFund(request, resolved, quote, summary, chart) {

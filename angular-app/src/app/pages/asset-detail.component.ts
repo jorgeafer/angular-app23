@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import {
@@ -9,14 +10,14 @@ import {
   YahooFundDetailsViewModel,
   YahooIdentifierType
 } from '../models/yahoo.models';
-import { PortfolioRow } from '../models/portfolio.models';
+import { PortfolioOperation, PortfolioOperationType, PortfolioRow } from '../models/portfolio.models';
 import { PortfolioDataService } from '../services/portfolio-data.service';
 import { YahooFinanceAssetService } from '../services/yahoo-finance-asset.service';
 import { formatDateEs } from '../utils/formatting';
 
 @Component({
   selector: 'app-asset-detail',
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './asset-detail.component.html',
   styleUrl: './asset-detail.component.css'
 })
@@ -30,9 +31,31 @@ export class AssetDetailComponent implements OnInit {
   protected yahooError = '';
   protected yahooEmptyMessage = '';
   protected yahooDetails: YahooDetailsViewModel | null = null;
+  protected operationsLoading = false;
+  protected operationsError = '';
+  protected operations: PortfolioOperation[] = [];
+  protected operationFormError = '';
+  protected isSavingOperation = false;
+  protected editingOperationId = '';
+  protected showOperationForm = false;
   protected selectedChartRange: YahooFundChartRange = 'ytd';
   protected hoveredChartPointIndex: number | null = null;
   protected hoveredGeographyIndex: number | null = null;
+  protected readonly operationTypeOptions: Array<{ key: PortfolioOperationType; label: string }> = [
+    { key: 'buy', label: 'Compra' },
+    { key: 'sell', label: 'Venta' },
+    { key: 'dividend', label: 'Dividendo' },
+    { key: 'fee', label: 'Comision' }
+  ];
+  protected operationForm: {
+    operationType: PortfolioOperationType;
+    operationDate: string;
+    quantity: string;
+    unitPrice: string;
+    amount: string;
+    feeAmount: string;
+    notes: string;
+  } = this.createEmptyOperationForm();
   protected readonly chartRanges: Array<{ key: YahooFundChartRange; label: string }> = [
     { key: '1m', label: 'Ultimo mes' },
     { key: '3m', label: '3 meses' },
@@ -69,6 +92,7 @@ export class AssetDetailComponent implements OnInit {
       }
 
       this.asset = asset;
+      await this.loadOperations(asset.id);
       await this.loadYahooDetails(asset);
     } catch (error) {
       this.errorMessage = error instanceof Error ? error.message : 'Error al cargar el detalle del activo.';
@@ -350,6 +374,126 @@ export class AssetDetailComponent implements OnInit {
     return this.formatNavValue(value);
   }
 
+  protected get canManageOperations(): boolean {
+    return this.portfolioKey === 'main';
+  }
+
+  protected get isOperationFormVisible(): boolean {
+    return this.showOperationForm || !!this.editingOperationId;
+  }
+
+  protected get operationAmountLabel(): string {
+    if (this.operationForm.operationType === 'buy' || this.operationForm.operationType === 'sell') {
+      return 'Importe calculado';
+    }
+
+    return this.operationForm.operationType === 'dividend' ? 'Importe del dividendo' : 'Importe de la comision';
+  }
+
+  protected get operationGrossAmountPreview(): string {
+    if (this.operationForm.operationType !== 'buy' && this.operationForm.operationType !== 'sell') {
+      return this.operationForm.amount || '-';
+    }
+
+    const quantity = Number(this.operationForm.quantity.replace(',', '.'));
+    const unitPrice = Number(this.operationForm.unitPrice.replace(',', '.'));
+
+    if (!Number.isFinite(quantity) || !Number.isFinite(unitPrice)) {
+      return '-';
+    }
+
+    return this.formatCurrency(quantity * unitPrice);
+  }
+
+  protected startEditOperation(operation: PortfolioOperation): void {
+    this.showOperationForm = true;
+    this.editingOperationId = operation.id;
+    this.operationFormError = '';
+    this.operationForm = {
+      operationType: operation.operationType,
+      operationDate: this.toIsoDate(operation.operationDate),
+      quantity: operation.quantity === null ? '' : String(operation.quantity).replace('.', ','),
+      unitPrice: operation.unitPrice === null ? '' : String(operation.unitPrice).replace('.', ','),
+      amount: operation.amount === null ? '' : String(operation.amount).replace('.', ','),
+      feeAmount: operation.feeAmount === null ? '' : String(operation.feeAmount).replace('.', ','),
+      notes: operation.notes || ''
+    };
+  }
+
+  protected cancelEditOperation(): void {
+    this.editingOperationId = '';
+    this.showOperationForm = false;
+    this.operationFormError = '';
+    this.operationForm = this.createEmptyOperationForm();
+  }
+
+  protected openOperationForm(): void {
+    this.showOperationForm = true;
+    this.editingOperationId = '';
+    this.operationFormError = '';
+    this.operationForm = this.createEmptyOperationForm();
+  }
+
+  protected async submitOperation(): Promise<void> {
+    if (!this.asset) {
+      return;
+    }
+
+    this.isSavingOperation = true;
+    this.operationFormError = '';
+
+    const payload = {
+      operationType: this.operationForm.operationType,
+      operationDate: this.operationForm.operationDate,
+      quantity: this.operationForm.quantity,
+      unitPrice: this.operationForm.unitPrice,
+      amount: this.operationForm.amount,
+      feeAmount: this.operationForm.feeAmount,
+      notes: this.operationForm.notes
+    };
+
+    try {
+      if (this.editingOperationId) {
+        this.operations = await this.portfolioDataService.updateAssetOperation(
+          this.asset.id,
+          this.editingOperationId,
+          payload,
+          this.portfolioKey
+        );
+      } else {
+        this.operations = await this.portfolioDataService.createAssetOperation(this.asset.id, payload, this.portfolioKey);
+      }
+
+      this.cancelEditOperation();
+      await this.refreshAsset();
+    } catch (error) {
+      this.operationFormError = error instanceof Error ? error.message : 'No se pudo guardar el movimiento.';
+    } finally {
+      this.isSavingOperation = false;
+    }
+  }
+
+  protected async deleteOperation(operation: PortfolioOperation): Promise<void> {
+    if (!this.asset) {
+      return;
+    }
+
+    this.operationFormError = '';
+    this.isSavingOperation = true;
+
+    try {
+      this.operations = await this.portfolioDataService.deleteAssetOperation(this.asset.id, operation.id, this.portfolioKey);
+      if (this.editingOperationId === operation.id) {
+        this.cancelEditOperation();
+      }
+      await this.refreshAsset();
+    } catch (error) {
+      this.operationFormError = error instanceof Error ? error.message : 'No se pudo borrar el movimiento.';
+    } finally {
+      this.isSavingOperation = false;
+    }
+  }
+
   private async loadYahooDetails(asset: PortfolioRow): Promise<void> {
     const lookup = this.resolveLookup(asset);
 
@@ -373,6 +517,31 @@ export class AssetDetailComponent implements OnInit {
         error instanceof Error ? error.message : 'No se pudo recuperar la informacion enriquecida de Yahoo Finance.';
     } finally {
       this.yahooLoading = false;
+    }
+  }
+
+  private async loadOperations(assetId: string): Promise<void> {
+    this.operationsLoading = true;
+    this.operationsError = '';
+
+    try {
+      this.operations = await this.portfolioDataService.getAssetOperations(assetId, this.portfolioKey);
+    } catch (error) {
+      this.operationsError = error instanceof Error ? error.message : 'No se pudieron cargar los movimientos.';
+    } finally {
+      this.operationsLoading = false;
+    }
+  }
+
+  private async refreshAsset(): Promise<void> {
+    if (!this.asset) {
+      return;
+    }
+
+    const refreshed = await this.portfolioDataService.getAssetById(this.asset.id, this.portfolioKey);
+    if (refreshed) {
+      this.asset = refreshed;
+      await this.loadYahooDetails(refreshed);
     }
   }
 
@@ -456,5 +625,26 @@ export class AssetDetailComponent implements OnInit {
 
   private formatDate(value: string): string {
     return formatDateEs(value);
+  }
+
+  private createEmptyOperationForm() {
+    return {
+      operationType: 'buy' as PortfolioOperationType,
+      operationDate: new Date().toISOString().slice(0, 10),
+      quantity: '',
+      unitPrice: '',
+      amount: '',
+      feeAmount: '',
+      notes: ''
+    };
+  }
+
+  private toIsoDate(value: string): string {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+      return value;
+    }
+
+    const [day, month, year] = value.split('/');
+    return day && month && year ? `${year}-${month}-${day}` : value;
   }
 }

@@ -20,6 +20,14 @@ class YahooFinanceService {
 
     return this.provider.getFundSnapshot(request);
   }
+
+  async getMarketSeries(symbol) {
+    if (!symbol || typeof symbol !== 'string') {
+      throw new HttpError(400, 'symbol is required');
+    }
+
+    return this.provider.getMarketSeries(symbol);
+  }
 }
 
 function validateRequest(request) {

@@ -37,12 +37,12 @@
   </section>
 
   @if (isLoading) {
-    <section class="status-card">
+    <section class="status-card app-status-card">
       <h2>Cargando cartera</h2>
       <p>Estamos leyendo el Excel y calculando los resumenes.</p>
     </section>
   } @else if (errorMessage) {
-    <section class="status-card status-card--error">
+    <section class="status-card status-card--error app-status-card app-status-card--error">
       <h2>No se pudo cargar la cartera</h2>
       <p>{{ errorMessage }}</p>
     </section>
@@ -59,9 +59,10 @@
     @if (activeTab === 'posiciones') {
       <section class="toolbar-card">
         <div class="toolbar-filters">
-          <label class="field">
+          <label class="field app-form-field">
             <span>Buscar activo</span>
             <input
+              class="app-input"
               type="search"
               [(ngModel)]="searchTerm"
               (ngModelChange)="updateFilters()"
@@ -69,18 +70,18 @@
             />
           </label>
 
-          <label class="field">
+          <label class="field app-form-field">
             <span>Filtrar por tipo</span>
-            <select [(ngModel)]="selectedType" (ngModelChange)="updateFilters()">
+            <select class="app-select" [(ngModel)]="selectedType" (ngModelChange)="updateFilters()">
               @for (type of availableTypes; track type) {
                 <option [value]="type">{{ type }}</option>
               }
             </select>
           </label>
 
-          <label class="field">
+          <label class="field app-form-field">
             <span>Fecha de valor liquidativo</span>
-            <input type="date" [(ngModel)]="selectedDate" />
+            <input class="app-input" type="date" [(ngModel)]="selectedDate" />
           </label>
 
           <div class="chip-row">
@@ -193,7 +194,85 @@
                       <td class="cell-name cell-asset">
                         <strong>{{ row.name }}</strong>
                         <span class="cell-meta">{{ row.isin || 'Sin ISIN' }}</span>
-                        <span class="cell-meta">Tipo: {{ row.type || 'Sin tipo' }}</span>
+                        <div class="editable-cell editable-cell--stack" (click)="$event.stopPropagation()">
+                          @if (isEditingCell(row.id, 'type')) {
+                            <input
+                              class="editable-cell__input"
+                              type="text"
+                              [ngModel]="editingCell?.draftValue || ''"
+                              (ngModelChange)="updateEditingValue($event)"
+                              (click)="$event.stopPropagation()"
+                            />
+                            <button
+                              type="button"
+                              class="icon-button icon-button--confirm"
+                              (click)="saveEditingCell(row, 'type', $event)"
+                              [disabled]="isSavingCell(row.id, 'type')"
+                              aria-label="Guardar tipo"
+                            >
+                              <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z" />
+                              </svg>
+                            </button>
+                          } @else {
+                            <span class="cell-meta">Tipo: {{ row.type || 'Sin tipo' }}</span>
+                            @if (section.title === 'FONDOS' && isFundEditMode) {
+                              <button
+                                type="button"
+                                class="icon-button"
+                                (click)="startEditingCell(row, 'type', $event)"
+                                aria-label="Editar tipo"
+                              >
+                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                  <path
+                                    d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm17.71-10.04a1.003 1.003 0 0 0 0-1.42l-2.5-2.5a1.003 1.003 0 0 0-1.42 0l-1.96 1.96 3.75 3.75 2.13-1.79z"
+                                  />
+                                </svg>
+                              </button>
+                            }
+                          }
+                        </div>
+                        <div class="editable-cell editable-cell--stack" (click)="$event.stopPropagation()">
+                          @if (isEditingCell(row.id, 'currency')) {
+                            <select
+                              class="editable-cell__input editable-cell__select"
+                              [ngModel]="editingCell?.draftValue || currencyOptions[0]"
+                              (ngModelChange)="updateEditingValue($event)"
+                              (click)="$event.stopPropagation()"
+                            >
+                              @for (option of currencyOptions; track option) {
+                                <option [value]="option">{{ option }}</option>
+                              }
+                            </select>
+                            <button
+                              type="button"
+                              class="icon-button icon-button--confirm"
+                              (click)="saveEditingCell(row, 'currency', $event)"
+                              [disabled]="isSavingCell(row.id, 'currency')"
+                              aria-label="Guardar divisa"
+                            >
+                              <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z" />
+                              </svg>
+                            </button>
+                          } @else {
+                            <span class="cell-meta">Divisa: {{ row.currency || 'N/D' }}</span>
+                            @if (section.title === 'FONDOS' && isFundEditMode) {
+                              <button
+                                type="button"
+                                class="icon-button"
+                                (click)="startEditingCell(row, 'currency', $event)"
+                                aria-label="Editar divisa"
+                              >
+                                <svg viewBox="0 0 24 24" aria-hidden="true">
+                                  <path
+                                    d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm17.71-10.04a1.003 1.003 0 0 0 0-1.42l-2.5-2.5a1.003 1.003 0 0 0-1.42 0l-1.96 1.96 3.75 3.75 2.13-1.79z"
+                                  />
+                                </svg>
+                              </button>
+                            }
+                          }
+                        </div>
                         <div class="editable-cell editable-cell--stack" (click)="$event.stopPropagation()">
                           @if (isEditingCell(row.id, 'investmentClass')) {
                             <select
@@ -235,6 +314,11 @@
                             }
                           }
                         </div>
+                        @if (row.qualityIssues?.length) {
+                          <span class="cell-meta cell-meta--warning">
+                            Calidad {{ row.qualityScore }}/100 · {{ (row.qualityIssues ?? []).join(' · ') }}
+                          </span>
+                        }
                         @if (row.investmentClass) {
                           <span class="cell-meta">Clase: {{ row.investmentClass }}</span>
                         }
@@ -327,6 +411,7 @@
                       </td>
                       <td class="cell-valuation">
                         <strong>{{ row.totalValuation }}</strong>
+                        <span class="cell-meta">PM: {{ row.averageCost || '-' }}</span>
                         <span class="cell-meta">Peso: {{ row.valuationWeight || '-' }}</span>
                       </td>
                       <td class="cell-performance">
@@ -338,6 +423,8 @@
                             <strong [class.negative]="row.profitEurosValue < 0" [class.positive]="row.profitEurosValue > 0">
                               {{ row.profitEuros }}
                             </strong>
+                            <span class="cell-meta">Anualizada: {{ row.annualizedReturn || '-' }}</span>
+                            <span class="cell-meta">Contribucion: {{ row.contribution || '-' }}</span>
                           </div>
 
                           @if (section.title === 'FONDOS' && isFundEditMode) {
@@ -370,22 +457,35 @@
       <section class="insights-grid">
         <article class="chart-card">
           <header>
-            <p class="eyebrow">Resumen por tipo</p>
-            <h2>Distribucion de la cartera</h2>
+            <p class="eyebrow">Indicadores</p>
+            <h2>Lectura rapida de la cartera</h2>
           </header>
 
           <div class="chart-list">
-            @for (item of summaryByType; track item.label) {
-              <div class="chart-row">
-                <div class="chart-meta">
-                  <strong>{{ item.label }}</strong>
-                  <span>{{ item.formattedValue }} &middot; {{ formatPercentage(item.percentage) }}</span>
-                </div>
-                <div class="bar-track">
-                  <div class="bar-fill" [style.width]="getBarWidth(item)"></div>
-                </div>
+            <div class="chart-row">
+              <div class="chart-meta">
+                <strong>Rentabilidad anualizada</strong>
+                <span>{{ formatSignedPercentage(analytics.annualizedPortfolioReturn) }}</span>
               </div>
-            }
+            </div>
+            <div class="chart-row">
+              <div class="chart-meta">
+                <strong>Mejor activo</strong>
+                <span>{{ analytics.bestPerformerName }} &middot; {{ formatSignedPercentage(analytics.bestPerformerValue) }}</span>
+              </div>
+            </div>
+            <div class="chart-row">
+              <div class="chart-meta">
+                <strong>Peor activo</strong>
+                <span>{{ analytics.worstPerformerName }} &middot; {{ formatSignedPercentage(analytics.worstPerformerValue) }}</span>
+              </div>
+            </div>
+            <div class="chart-row">
+              <div class="chart-meta">
+                <strong>Mayor contribucion</strong>
+                <span>{{ analytics.topContributorName }} &middot; {{ formatSignedPercentage(analytics.topContributorValue) }}</span>
+              </div>
+            </div>
           </div>
         </article>
 
@@ -401,6 +501,9 @@
                 <div class="chart-meta">
                   <strong>{{ item.label }}</strong>
                   <span>{{ item.formattedValue }} &middot; {{ formatPercentage(item.percentage) }}</span>
+                  @if (getSummaryAssetRow(item.label); as assetRow) {
+                    <span>PM {{ assetRow.averageCost || '-' }} &middot; Anualizada {{ assetRow.annualizedReturn || '-' }} &middot; Contribucion {{ assetRow.contribution || '-' }}</span>
+                  }
                 </div>
                 <div class="bar-track bar-track--warm">
                   <div class="bar-fill bar-fill--warm" [style.width]="getBarWidth(item)"></div>
@@ -409,6 +512,79 @@
             }
           </div>
         </article>
+
+        <article class="chart-card">
+          <header>
+            <p class="eyebrow">Exposicion</p>
+            <h2>Sector y pais</h2>
+          </header>
+
+          <div class="dual-summary-grid">
+            <div>
+              <h3>Sectores</h3>
+              <div class="chart-list">
+                @for (item of summaryBySector.slice(0, 5); track item.label + item.formattedValue) {
+                  <div class="chart-row">
+                    <div class="chart-meta">
+                      <strong>{{ item.label }}</strong>
+                      <span>{{ item.formattedValue }} &middot; {{ formatPercentage(item.percentage) }}</span>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+            <div>
+              <h3>Paises</h3>
+              <div class="chart-list">
+                @for (item of summaryByCountry.slice(0, 5); track item.label + item.formattedValue) {
+                  <div class="chart-row">
+                    <div class="chart-meta">
+                      <strong>{{ item.label }}</strong>
+                      <span>{{ item.formattedValue }} &middot; {{ formatPercentage(item.percentage) }}</span>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+        </article>
+
+        <article class="chart-card">
+          <header>
+            <p class="eyebrow">Exposicion</p>
+            <h2>Gestoras y tipos</h2>
+          </header>
+
+          <div class="dual-summary-grid">
+            <div>
+              <h3>Gestoras</h3>
+              <div class="chart-list">
+                @for (item of summaryByManager.slice(0, 5); track item.label + item.formattedValue) {
+                  <div class="chart-row">
+                    <div class="chart-meta">
+                      <strong>{{ item.label }}</strong>
+                      <span>{{ item.formattedValue }} &middot; {{ formatPercentage(item.percentage) }}</span>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+            <div>
+              <h3>Tipos</h3>
+              <div class="chart-list">
+                @for (item of summaryByType.slice(0, 5); track item.label + item.formattedValue) {
+                  <div class="chart-row">
+                    <div class="chart-meta">
+                      <strong>{{ item.label }}</strong>
+                      <span>{{ item.formattedValue }} &middot; {{ formatPercentage(item.percentage) }}</span>
+                    </div>
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+        </article>
+
       </section>
 
       <section class="portfolio-trend-card">
@@ -574,7 +750,7 @@
       </div>
 
       @if (createFundErrorMessage) {
-        <p class="modal-error">{{ createFundErrorMessage }}</p>
+        <p class="modal-error app-message app-message--error">{{ createFundErrorMessage }}</p>
       }
 
       <footer class="modal-card__actions">
@@ -607,7 +783,7 @@
       </p>
 
       @if (deleteFundErrorMessage) {
-        <p class="modal-error">{{ deleteFundErrorMessage }}</p>
+        <p class="modal-error app-message app-message--error">{{ deleteFundErrorMessage }}</p>
       }
 
       <footer class="modal-card__actions">

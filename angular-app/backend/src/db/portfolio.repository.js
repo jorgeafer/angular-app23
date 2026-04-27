@@ -54,6 +54,20 @@ class PortfolioRepository {
         key TEXT PRIMARY KEY,
         value TEXT
       );
+
+      CREATE TABLE IF NOT EXISTS operations (
+        id TEXT PRIMARY KEY,
+        asset_id TEXT NOT NULL,
+        operation_type TEXT NOT NULL,
+        operation_date TEXT NOT NULL,
+        quantity REAL,
+        unit_price REAL,
+        amount REAL,
+        fee_amount REAL,
+        notes TEXT,
+        created_at TEXT,
+        updated_at TEXT
+      );
       `
     );
 
@@ -210,11 +224,73 @@ class PortfolioRepository {
   }
 
   async deletePositionById(id) {
+    await run(this.db, 'DELETE FROM operations WHERE asset_id = ?', [id]);
     return run(this.db, 'DELETE FROM positions WHERE id = ?', [id]);
   }
 
   async getSectionTotals() {
     return all(this.db, 'SELECT * FROM section_totals ORDER BY section ASC');
+  }
+
+  async getOperationsByAssetId(assetId) {
+    return all(this.db, 'SELECT * FROM operations WHERE asset_id = ? ORDER BY operation_date ASC, created_at ASC, id ASC', [assetId]);
+  }
+
+  async getOperationsByAssetIds(assetIds) {
+    if (!Array.isArray(assetIds) || !assetIds.length) {
+      return [];
+    }
+
+    const placeholders = assetIds.map(() => '?').join(', ');
+    return all(
+      this.db,
+      `SELECT * FROM operations WHERE asset_id IN (${placeholders}) ORDER BY asset_id ASC, operation_date ASC, created_at ASC, id ASC`,
+      assetIds
+    );
+  }
+
+  async getOperationById(id) {
+    return get(this.db, 'SELECT * FROM operations WHERE id = ?', [id]);
+  }
+
+  async upsertOperation(operation) {
+    await run(
+      this.db,
+      `
+      INSERT INTO operations (
+        id, asset_id, operation_type, operation_date, quantity, unit_price,
+        amount, fee_amount, notes, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        asset_id = excluded.asset_id,
+        operation_type = excluded.operation_type,
+        operation_date = excluded.operation_date,
+        quantity = excluded.quantity,
+        unit_price = excluded.unit_price,
+        amount = excluded.amount,
+        fee_amount = excluded.fee_amount,
+        notes = excluded.notes,
+        created_at = excluded.created_at,
+        updated_at = excluded.updated_at
+      `,
+      [
+        operation.id,
+        operation.assetId,
+        operation.operationType,
+        operation.operationDate,
+        operation.quantity ?? null,
+        operation.unitPrice ?? null,
+        operation.amount ?? null,
+        operation.feeAmount ?? null,
+        operation.notes ?? null,
+        operation.createdAt ?? null,
+        operation.updatedAt ?? null
+      ]
+    );
+  }
+
+  async deleteOperationById(id) {
+    return run(this.db, 'DELETE FROM operations WHERE id = ?', [id]);
   }
 }
 

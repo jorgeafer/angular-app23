@@ -3,10 +3,15 @@ import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import {
+  PortfolioAlert,
+  PortfolioAnalyticsOverview,
+  PortfolioBenchmarkSeriesPoint,
+  PortfolioBenchmarkOverview,
   CreateFundPayload,
   EditablePortfolioField,
   PortfolioNavPoint,
   PortfolioDataset,
+  PortfolioQualityOverview,
   PortfolioRow,
   PortfolioSection,
   PortfolioSummaryItem,
@@ -34,7 +39,9 @@ type PortfolioTrendScope = 'all' | 'funds' | 'equities';
   styleUrl: './portfolio-home.component.css'
 })
 export class PortfolioHomeComponent implements OnInit {
+  protected readonly formatDateEs = formatDateEs;
   protected readonly investmentClassOptions = ['RF', 'RV', 'Mixto', 'Otro'];
+  protected readonly currencyOptions = ['EUR', 'USD', 'GBP', 'CHF'];
   protected readonly portfolioTrendRanges: Array<{ key: PortfolioTrendRange; label: string }> = [
     { key: '1m', label: 'Ultimo mes' },
     { key: '3m', label: '3 meses' },
@@ -83,6 +90,7 @@ export class PortfolioHomeComponent implements OnInit {
   protected appliedDate = '';
   protected selectedPortfolioTrendRange: PortfolioTrendRange = 'ytd';
   protected selectedPortfolioTrendScope: PortfolioTrendScope = 'all';
+  protected selectedBenchmarkRange: PortfolioTrendRange = 'ytd';
   protected sortField: SortField = 'totalValuationValue';
   protected sortDirection: 'asc' | 'desc' = 'desc';
   protected lastUpdated = '';
@@ -90,6 +98,36 @@ export class PortfolioHomeComponent implements OnInit {
   protected filteredSections: PortfolioSection[] = [];
   protected summaryByType: PortfolioSummaryItem[] = [];
   protected summaryByAsset: PortfolioSummaryItem[] = [];
+  protected summaryByCurrency: PortfolioSummaryItem[] = [];
+  protected summaryByClass: PortfolioSummaryItem[] = [];
+  protected summaryBySector: PortfolioSummaryItem[] = [];
+  protected summaryByCountry: PortfolioSummaryItem[] = [];
+  protected summaryByManager: PortfolioSummaryItem[] = [];
+  protected alerts: PortfolioAlert[] = [];
+  protected benchmarkOverview: PortfolioBenchmarkOverview | null = null;
+  protected analytics: PortfolioAnalyticsOverview = {
+    topHoldingName: '-',
+    topHoldingWeight: 0,
+    topFiveWeight: 0,
+    bestPerformerName: '-',
+    bestPerformerValue: 0,
+    worstPerformerName: '-',
+    worstPerformerValue: 0,
+    topContributorName: '-',
+    topContributorValue: 0,
+    annualizedPortfolioReturn: 0,
+    positiveCount: 0,
+    negativeCount: 0,
+    staleCount: 0,
+    missingIdentifierCount: 0,
+    missingHistoryCount: 0
+  };
+  protected quality: PortfolioQualityOverview = {
+    score: 100,
+    staleCount: 0,
+    missingIdentifierCount: 0,
+    missingHistoryCount: 0
+  };
   protected availableTypes: string[] = [];
   protected isFundEditMode = false;
   protected isAddFundModalOpen = false;
@@ -103,6 +141,7 @@ export class PortfolioHomeComponent implements OnInit {
   protected savingCellKey = '';
   protected newFundForm: CreateFundPayload = this.createEmptyFundForm();
   protected portfolioTrendHoveredPointIndex: number | null = null;
+  protected benchmarkHoveredPointIndex: number | null = null;
 
   private sourceDataset: PortfolioDataset | null = null;
   private displayDataset: PortfolioDataset | null = null;
@@ -181,6 +220,31 @@ export class PortfolioHomeComponent implements OnInit {
     }).format(value)}%`;
   }
 
+  protected formatSignedPercentage(value: number, digits = 2): string {
+    const sign = value > 0 ? '+' : '';
+    return `${sign}${this.formatPercentage(value, digits)}`;
+  }
+
+  protected getSummaryAssetRow(label: string): PortfolioRow | undefined {
+    return this.displayDataset?.rows.find((row) => row.name === label);
+  }
+
+  protected getAlertSeverityClass(severity: PortfolioAlert['severity']): string {
+    return `alert-card--${severity}`;
+  }
+
+  protected getQualityTone(score: number): 'positive' | 'negative' | '' {
+    if (score >= 85) {
+      return 'positive';
+    }
+
+    if (score <= 60) {
+      return 'negative';
+    }
+
+    return '';
+  }
+
   protected setPortfolioTrendRange(range: PortfolioTrendRange): void {
     this.selectedPortfolioTrendRange = range;
     this.portfolioTrendHoveredPointIndex = null;
@@ -189,6 +253,11 @@ export class PortfolioHomeComponent implements OnInit {
   protected setPortfolioTrendScope(scope: PortfolioTrendScope): void {
     this.selectedPortfolioTrendScope = scope;
     this.portfolioTrendHoveredPointIndex = null;
+  }
+
+  protected setBenchmarkRange(range: PortfolioTrendRange): void {
+    this.selectedBenchmarkRange = range;
+    this.benchmarkHoveredPointIndex = null;
   }
 
   protected get hasPortfolioTrend(): boolean {
@@ -325,6 +394,181 @@ export class PortfolioHomeComponent implements OnInit {
 
   protected onPortfolioTrendLeave(): void {
     this.portfolioTrendHoveredPointIndex = null;
+  }
+
+  protected get hasBenchmarkTrend(): boolean {
+    return this.benchmarkChartPoints.portfolio.length > 1 && this.benchmarkChartPoints.benchmark.length > 1;
+  }
+
+  protected get benchmarkChartPoints(): {
+    portfolio: Array<{ date: string; value: number; x: number; y: number }>;
+    benchmark: Array<{ date: string; value: number; x: number; y: number }>;
+  } {
+    const points = this.filteredBenchmarkSeries;
+
+    if (!points.length) {
+      return { portfolio: [], benchmark: [] };
+    }
+
+    const values = points.flatMap((point) => [point.portfolioReturn, point.benchmarkReturn]);
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const range = max - min || 1;
+
+    return {
+      portfolio: points.map((point, index) => ({
+        date: point.date,
+        value: point.portfolioReturn,
+        x: (index / Math.max(points.length - 1, 1)) * 100,
+        y: 100 - ((point.portfolioReturn - min) / range) * 100
+      })),
+      benchmark: points.map((point, index) => ({
+        date: point.date,
+        value: point.benchmarkReturn,
+        x: (index / Math.max(points.length - 1, 1)) * 100,
+        y: 100 - ((point.benchmarkReturn - min) / range) * 100
+      }))
+    };
+  }
+
+  protected get benchmarkPortfolioPolylinePoints(): string {
+    return this.benchmarkChartPoints.portfolio.map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(' ');
+  }
+
+  protected get benchmarkReferencePolylinePoints(): string {
+    return this.benchmarkChartPoints.benchmark.map((point) => `${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(' ');
+  }
+
+  protected get benchmarkHoveredPoint(): PortfolioBenchmarkSeriesPoint | null {
+    if (this.benchmarkHoveredPointIndex === null) {
+      return null;
+    }
+
+    return this.filteredBenchmarkSeries[this.benchmarkHoveredPointIndex] ?? null;
+  }
+
+  protected get benchmarkHoveredMarkerPosition():
+    | { portfolioY: number; benchmarkY: number; x: number }
+    | null {
+    if (this.benchmarkHoveredPointIndex === null) {
+      return null;
+    }
+
+    const portfolioPoint = this.benchmarkChartPoints.portfolio[this.benchmarkHoveredPointIndex];
+    const benchmarkPoint = this.benchmarkChartPoints.benchmark[this.benchmarkHoveredPointIndex];
+
+    if (!portfolioPoint || !benchmarkPoint) {
+      return null;
+    }
+
+    return {
+      x: portfolioPoint.x,
+      portfolioY: portfolioPoint.y,
+      benchmarkY: benchmarkPoint.y
+    };
+  }
+
+  protected get benchmarkTooltipLeft(): number {
+    const point = this.benchmarkHoveredMarkerPosition;
+    return point ? Math.min(Math.max(point.x, 14), 86) : 50;
+  }
+
+  protected get benchmarkTooltipTop(): number {
+    const point = this.benchmarkHoveredMarkerPosition;
+
+    if (!point) {
+      return 50;
+    }
+
+    return Math.max(Math.min(point.portfolioY, point.benchmarkY), 18);
+  }
+
+  protected get benchmarkSummaryDateLabel(): string {
+    const date = this.benchmarkHoveredPoint?.date;
+    return date ? formatDateEs(date) : this.benchmarkDateRangeLabel;
+  }
+
+  protected get benchmarkSummaryPortfolioValue(): number {
+    return this.benchmarkHoveredPoint?.portfolioReturn ?? this.filteredBenchmarkSeries.at(-1)?.portfolioReturn ?? 0;
+  }
+
+  protected get benchmarkSummaryReferenceValue(): number {
+    return this.benchmarkHoveredPoint?.benchmarkReturn ?? this.filteredBenchmarkSeries.at(-1)?.benchmarkReturn ?? 0;
+  }
+
+  protected get benchmarkSummaryExcessValue(): number {
+    return this.benchmarkHoveredPoint?.excessReturn ?? this.filteredBenchmarkSeries.at(-1)?.excessReturn ?? 0;
+  }
+
+  protected get benchmarkDateRangeLabel(): string {
+    const points = this.filteredBenchmarkSeries;
+
+    if (points.length < 2) {
+      return '';
+    }
+
+    return `${formatDateEs(points[0].date)} - ${formatDateEs(points[points.length - 1].date)}`;
+  }
+
+  protected get benchmarkYTicks(): string[] {
+    const values = this.filteredBenchmarkSeries.flatMap((point) => [point.portfolioReturn, point.benchmarkReturn]);
+
+    if (!values.length) {
+      return [];
+    }
+
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const steps = 4;
+
+    return Array.from({ length: steps + 1 }, (_, index) => formatPercentEs(max - ((max - min) / steps) * index));
+  }
+
+  protected get benchmarkXTicks(): Array<{ label: string; position: number }> {
+    const points = this.filteredBenchmarkSeries;
+
+    if (points.length < 2) {
+      return [];
+    }
+
+    const indexes = Array.from(
+      new Set([
+        0,
+        Math.floor((points.length - 1) * 0.25),
+        Math.floor((points.length - 1) * 0.5),
+        Math.floor((points.length - 1) * 0.75),
+        points.length - 1
+      ])
+    );
+
+    return indexes.map((index) => ({
+      label: formatDateEs(points[index].date),
+      position: points.length === 1 ? 0 : (index / (points.length - 1)) * 100
+    }));
+  }
+
+  protected onBenchmarkHover(event: MouseEvent): void {
+    const currentTarget = event.currentTarget;
+
+    if (!(currentTarget instanceof HTMLElement)) {
+      return;
+    }
+
+    const rect = currentTarget.getBoundingClientRect();
+    const relativeX = Math.min(Math.max(event.clientX - rect.left, 0), rect.width);
+    const points = this.filteredBenchmarkSeries;
+
+    if (!points.length) {
+      this.benchmarkHoveredPointIndex = null;
+      return;
+    }
+
+    const index = Math.round((relativeX / Math.max(rect.width, 1)) * (points.length - 1));
+    this.benchmarkHoveredPointIndex = Math.min(Math.max(index, 0), points.length - 1);
+  }
+
+  protected onBenchmarkLeave(): void {
+    this.benchmarkHoveredPointIndex = null;
   }
 
   protected get hasPendingDateChange(): boolean {
@@ -534,20 +778,29 @@ export class PortfolioHomeComponent implements OnInit {
     this.portfolioTotals = this.buildTotals(this.displayDataset.rows);
     this.summaryByType = this.displayDataset.summaryByType;
     this.summaryByAsset = this.displayDataset.summaryByAsset;
+    this.summaryBySector = this.displayDataset.summaryBySector;
+    this.summaryByCountry = this.displayDataset.summaryByCountry;
+    this.summaryByManager = this.displayDataset.summaryByManager;
+    this.summaryByCurrency = this.displayDataset.summaryByCurrency;
+    this.summaryByClass = this.displayDataset.summaryByClass;
+    this.alerts = this.displayDataset.alerts;
+    this.benchmarkOverview = this.displayDataset.benchmarkOverview;
+    this.analytics = this.displayDataset.analytics;
+    this.quality = this.displayDataset.quality;
     this.updateFilters();
   }
 
   private recalculateDatasetForDate(dataset: PortfolioDataset, asOfDate: string): PortfolioDataset {
+    const recalculatedRows = dataset.sections.flatMap((section) => section.rows.map((row) => this.recalculateRowForDate(row, asOfDate)));
+    const rows = this.applyPortfolioInsightMetrics(recalculatedRows);
     const sections = dataset.sections.map((section) => {
-      const rows = section.rows.map((row) => this.recalculateRowForDate(row, asOfDate));
+      const sectionRows = rows.filter((row) => row.section === section.title);
       return {
         ...section,
-        rows,
-        totals: this.buildTotals(rows)
+        rows: sectionRows,
+        totals: this.buildTotals(sectionRows)
       };
     });
-
-    const rows = sections.flatMap((section) => section.rows);
     const portfolioTotal = rows.reduce((sum, row) => sum + row.totalValuationValue, 0);
 
     return {
@@ -560,6 +813,11 @@ export class PortfolioHomeComponent implements OnInit {
       sections,
       rows,
       summaryByType: this.buildSummary(rows, (row) => row.type || 'Sin tipo'),
+      summaryBySector: this.buildSummary(rows, (row) => row.sector || (row.section === 'FONDOS' ? row.categoryName || 'Sin categoria' : 'Sin sector')),
+      summaryByCountry: this.buildSummary(rows, (row) => row.country || 'Sin pais'),
+      summaryByManager: this.buildSummary(rows, (row) => row.managerName || (row.section === 'ACCIONES' ? 'Directa' : 'Sin gestora')),
+      summaryByCurrency: this.buildSummary(rows, (row) => row.currency || 'Sin divisa'),
+      summaryByClass: this.buildSummary(rows, (row) => row.investmentClass || 'Sin clase'),
       summaryByAsset: [...rows]
         .sort((left, right) => right.totalValuationValue - left.totalValuationValue)
         .slice(0, 8)
@@ -568,7 +826,17 @@ export class PortfolioHomeComponent implements OnInit {
           value: row.totalValuationValue,
           formattedValue: formatCurrencyEs(row.totalValuationValue),
           percentage: portfolioTotal > 0 ? (row.totalValuationValue / portfolioTotal) * 100 : 0
-        }))
+        })),
+      alerts: dataset.alerts.map((item) => ({ ...item })),
+      benchmarkOverview: dataset.benchmarkOverview
+        ? {
+            ...dataset.benchmarkOverview,
+            series: (dataset.benchmarkOverview.series ?? []).map((item) => ({ ...item })),
+            snapshots: dataset.benchmarkOverview.snapshots.map((item) => ({ ...item }))
+          }
+        : null,
+      analytics: { ...dataset.analytics },
+      quality: { ...dataset.quality }
     };
   }
 
@@ -632,7 +900,7 @@ export class PortfolioHomeComponent implements OnInit {
     }
 
     const lastDate = new Date(`${allDates[allDates.length - 1]}T00:00:00`);
-    const startDate = this.resolvePortfolioTrendStartDate(lastDate);
+    const startDate = this.resolveTrendStartDate(lastDate, this.selectedPortfolioTrendRange);
     const pointsByRow = rows.map((row) => ({
       row,
       history: [...(row.navHistory ?? [])].sort((left, right) => left.date.localeCompare(right.date)),
@@ -690,6 +958,19 @@ export class PortfolioHomeComponent implements OnInit {
     return series;
   }
 
+  private get filteredBenchmarkSeries(): PortfolioBenchmarkSeriesPoint[] {
+    const points = this.benchmarkOverview?.series ?? [];
+
+    if (!points.length) {
+      return [];
+    }
+
+    const lastDate = new Date(`${points[points.length - 1].date}T00:00:00`);
+    const startDate = this.resolveTrendStartDate(lastDate, this.selectedBenchmarkRange);
+
+    return points.filter((point) => new Date(`${point.date}T00:00:00`) >= startDate);
+  }
+
   private getPortfolioTrendRows(): PortfolioRow[] {
     const rows = this.sourceDataset?.rows ?? [];
 
@@ -710,8 +991,8 @@ export class PortfolioHomeComponent implements OnInit {
     });
   }
 
-  private resolvePortfolioTrendStartDate(lastDate: Date): Date {
-    switch (this.selectedPortfolioTrendRange) {
+  private resolveTrendStartDate(lastDate: Date, range: PortfolioTrendRange): Date {
+    switch (range) {
       case '1m':
         return this.subtractMonths(lastDate, 1);
       case '3m':
@@ -793,7 +1074,22 @@ export class PortfolioHomeComponent implements OnInit {
       })),
       rows: dataset.rows.map((row) => ({ ...row, navHistory: row.navHistory ? [...row.navHistory] : undefined })),
       summaryByType: dataset.summaryByType.map((item) => ({ ...item })),
-      summaryByAsset: dataset.summaryByAsset.map((item) => ({ ...item }))
+      summaryByAsset: dataset.summaryByAsset.map((item) => ({ ...item })),
+      summaryBySector: dataset.summaryBySector.map((item) => ({ ...item })),
+      summaryByCountry: dataset.summaryByCountry.map((item) => ({ ...item })),
+      summaryByManager: dataset.summaryByManager.map((item) => ({ ...item })),
+      summaryByCurrency: dataset.summaryByCurrency.map((item) => ({ ...item })),
+      summaryByClass: dataset.summaryByClass.map((item) => ({ ...item })),
+      alerts: dataset.alerts.map((item) => ({ ...item })),
+      benchmarkOverview: dataset.benchmarkOverview
+        ? {
+            ...dataset.benchmarkOverview,
+            series: (dataset.benchmarkOverview.series ?? []).map((item) => ({ ...item })),
+            snapshots: dataset.benchmarkOverview.snapshots.map((item) => ({ ...item }))
+          }
+        : null,
+      analytics: { ...dataset.analytics },
+      quality: { ...dataset.quality }
     };
   }
 
@@ -888,7 +1184,7 @@ export class PortfolioHomeComponent implements OnInit {
       return;
     }
 
-    this.sourceDataset = {
+    this.sourceDataset = this.rebuildDatasetInsights({
       ...this.sourceDataset,
       sections: this.sourceDataset.sections.map((section) => ({
         ...section,
@@ -896,9 +1192,101 @@ export class PortfolioHomeComponent implements OnInit {
         totals: section.totals ? { ...section.totals } : null
       })),
       rows: this.sourceDataset.rows.map((row) => row.id === rowId ? this.getUpdatedRow(row, field, rawValue) : row)
-    };
+    });
 
     this.applyDateToDataset();
+  }
+
+  private rebuildDatasetInsights(dataset: PortfolioDataset): PortfolioDataset {
+    const rows = this.applyPortfolioInsightMetrics(dataset.rows.map((row) => ({ ...row })));
+
+    return {
+      ...dataset,
+      rows,
+      sections: dataset.sections.map((section) => {
+        const sectionRows = rows.filter((row) => row.section === section.title);
+        return {
+          ...section,
+          rows: sectionRows,
+          totals: this.buildTotals(sectionRows)
+        };
+      }),
+      summaryByType: this.buildSummary(rows, (row) => row.type || 'Sin tipo'),
+      summaryByAsset: [...rows]
+        .sort((left, right) => right.totalValuationValue - left.totalValuationValue)
+        .slice(0, 8)
+        .map((row) => ({
+          label: row.name,
+          value: row.totalValuationValue,
+          formattedValue: formatCurrencyEs(row.totalValuationValue),
+          percentage: rows.reduce((sum, item) => sum + item.totalValuationValue, 0) > 0
+            ? (row.totalValuationValue / rows.reduce((sum, item) => sum + item.totalValuationValue, 0)) * 100
+            : 0
+        })),
+      summaryBySector: this.buildSummary(rows, (row) => row.sector || (row.section === 'FONDOS' ? row.categoryName || 'Sin categoria' : 'Sin sector')),
+      summaryByCountry: this.buildSummary(rows, (row) => row.country || 'Sin pais'),
+      summaryByManager: this.buildSummary(rows, (row) => row.managerName || (row.section === 'ACCIONES' ? 'Directa' : 'Sin gestora')),
+      summaryByCurrency: this.buildSummary(rows, (row) => row.currency || 'Sin divisa'),
+      summaryByClass: this.buildSummary(rows, (row) => row.investmentClass || 'Sin clase')
+    };
+  }
+
+  private applyPortfolioInsightMetrics(rows: PortfolioRow[]): PortfolioRow[] {
+    if (!rows.length) {
+      return [];
+    }
+
+    const portfolioValuation = rows.reduce((sum, row) => sum + row.totalValuationValue, 0);
+
+    return rows.map((row) => {
+      const averageCostValue = row.sharesValue > 0 ? this.round(row.totalInvestedValue / row.sharesValue, 2) : 0;
+      const annualizedReturnValue = this.computeAnnualizedReturn(row);
+      const contributionValue = portfolioValuation > 0
+        ? this.round((row.totalValuationValue / portfolioValuation) * row.totalReturnValue, 2)
+        : 0;
+
+      return {
+        ...row,
+        averageCostValue,
+        averageCost: formatCurrencyEs(averageCostValue),
+        annualizedReturnValue,
+        annualizedReturn: formatPercentEs(annualizedReturnValue),
+        contributionValue,
+        contribution: formatPercentEs(contributionValue)
+      };
+    });
+  }
+
+  private computeAnnualizedReturn(row: PortfolioRow): number {
+    if (row.totalInvestedValue <= 0 || row.totalValuationValue <= 0) {
+      return 0;
+    }
+
+    const firstDate = this.toIsoDate(row.navHistory?.[0]?.date || '');
+    const lastDate = this.toIsoDate(row.navHistory?.at(-1)?.date || row.marketDate);
+
+    if (!firstDate || !lastDate) {
+      return row.totalReturnValue;
+    }
+
+    const years = this.diffInYears(firstDate, lastDate);
+
+    if (years <= 0) {
+      return row.totalReturnValue;
+    }
+
+    return this.round((Math.pow(row.totalValuationValue / row.totalInvestedValue, 1 / years) - 1) * 100, 2);
+  }
+
+  private diffInYears(startDate: string, endDate: string): number {
+    const start = new Date(`${startDate}T00:00:00`);
+    const end = new Date(`${endDate}T00:00:00`);
+
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      return 0;
+    }
+
+    return Math.max((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 365.25), 0);
   }
 
   private getUpdatedRow(row: PortfolioRow, field: EditablePortfolioField, rawValue: string): PortfolioRow {
@@ -906,6 +1294,20 @@ export class PortfolioHomeComponent implements OnInit {
       return {
         ...row,
         investmentClass: rawValue
+      };
+    }
+
+    if (field === 'type') {
+      return {
+        ...row,
+        type: rawValue
+      };
+    }
+
+    if (field === 'currency') {
+      return {
+        ...row,
+        currency: rawValue.toUpperCase()
       };
     }
 
@@ -949,6 +1351,14 @@ export class PortfolioHomeComponent implements OnInit {
 
     if (field === 'totalInvested') {
       return row.totalInvested;
+    }
+
+    if (field === 'type') {
+      return row.type;
+    }
+
+    if (field === 'currency') {
+      return row.currency;
     }
 
     return row.investmentClass || 'Otro';

@@ -3,7 +3,7 @@ export interface PortfolioNavPoint {
   close: number;
 }
 
-export type EditablePortfolioField = 'shares' | 'totalInvested' | 'investmentClass';
+export type EditablePortfolioField = 'shares' | 'totalInvested' | 'investmentClass' | 'type' | 'currency';
 
 export interface CreateFundPayload {
   name: string;
@@ -12,6 +12,32 @@ export interface CreateFundPayload {
   currency: string;
   totalInvested: string;
   shares: string;
+}
+
+export type PortfolioOperationType = 'buy' | 'sell' | 'dividend' | 'fee';
+
+export interface PortfolioOperation {
+  id: string;
+  assetId: string;
+  operationType: PortfolioOperationType;
+  operationDate: string;
+  quantity: number | null;
+  unitPrice: number | null;
+  amount: number | null;
+  feeAmount: number | null;
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PortfolioOperationPayload {
+  operationType: PortfolioOperationType;
+  operationDate: string;
+  quantity: string | number | null;
+  unitPrice: string | number | null;
+  amount: string | number | null;
+  feeAmount: string | number | null;
+  notes: string;
 }
 
 export interface PortfolioRow {
@@ -41,7 +67,22 @@ export interface PortfolioRow {
   totalReturnValue: number;
   sharesValue: number;
   unitValueNumber: number;
+  averageCost?: string;
+  averageCostValue?: number;
+  annualizedReturn?: string;
+  annualizedReturnValue?: number;
+  contribution?: string;
+  contributionValue?: number;
+  sector?: string;
+  country?: string;
+  managerName?: string;
+  categoryName?: string;
   navHistory?: PortfolioNavPoint[];
+  qualityIssues?: string[];
+  qualityScore?: number;
+  stalePrice?: boolean;
+  missingIdentifiers?: boolean;
+  missingHistory?: boolean;
 }
 
 export interface PortfolioTotals {
@@ -68,10 +109,73 @@ export interface PortfolioSummaryItem {
   percentage: number;
 }
 
+export interface PortfolioAlert {
+  id: string;
+  severity: 'info' | 'warning' | 'critical';
+  title: string;
+  description: string;
+}
+
+export interface PortfolioBenchmarkSnapshot {
+  label: string;
+  portfolioReturn: number;
+  benchmarkReturn: number;
+  excessReturn: number;
+}
+
+export interface PortfolioBenchmarkSeriesPoint {
+  date: string;
+  portfolioReturn: number;
+  benchmarkReturn: number;
+  excessReturn: number;
+}
+
+export interface PortfolioBenchmarkOverview {
+  label: string;
+  symbol: string;
+  series: PortfolioBenchmarkSeriesPoint[];
+  snapshots: PortfolioBenchmarkSnapshot[];
+}
+
+export interface PortfolioAnalyticsOverview {
+  topHoldingName: string;
+  topHoldingWeight: number;
+  topFiveWeight: number;
+  bestPerformerName: string;
+  bestPerformerValue: number;
+  worstPerformerName: string;
+  worstPerformerValue: number;
+  topContributorName: string;
+  topContributorValue: number;
+  annualizedPortfolioReturn: number;
+  positiveCount: number;
+  negativeCount: number;
+  staleCount: number;
+  missingIdentifierCount: number;
+  missingHistoryCount: number;
+}
+
+export interface PortfolioQualityOverview {
+  score: number;
+  staleCount: number;
+  missingIdentifierCount: number;
+  missingHistoryCount: number;
+}
+
 export interface PortfolioDataset {
   lastUpdated: string;
+  lastImportedAt?: string | null;
   sections: PortfolioSection[];
   rows: PortfolioRow[];
   summaryByType: PortfolioSummaryItem[];
   summaryByAsset: PortfolioSummaryItem[];
+  summaryByCurrency: PortfolioSummaryItem[];
+  summaryByClass: PortfolioSummaryItem[];
+  summaryBySector: PortfolioSummaryItem[];
+  summaryByCountry: PortfolioSummaryItem[];
+  summaryByManager: PortfolioSummaryItem[];
+  alerts: PortfolioAlert[];
+  benchmarkOverview: PortfolioBenchmarkOverview | null;
+  analytics: PortfolioAnalyticsOverview;
+  quality: PortfolioQualityOverview;
 }
