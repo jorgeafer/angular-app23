@@ -1,8 +1,18 @@
+const { env } = require('../config/env');
 const { HttpError } = require('../errors/http-error');
+const { TwelveDataProvider } = require('../providers/twelve-data.provider');
 const { YahooFinanceProvider } = require('../providers/yahoo-finance.provider');
 
+function createDefaultProvider() {
+  if (env.twelveDataApiKey) {
+    return new TwelveDataProvider(env.twelveDataApiKey);
+  }
+
+  return new YahooFinanceProvider();
+}
+
 class YahooFinanceService {
-  constructor(provider = new YahooFinanceProvider()) {
+  constructor(provider = createDefaultProvider()) {
     this.provider = provider;
   }
 

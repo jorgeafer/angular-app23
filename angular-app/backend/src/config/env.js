@@ -16,6 +16,7 @@ const env = {
     .split(',')
     .map((value) => value.trim())
     .filter(Boolean),
+  twelveDataApiKey: process.env.TWELVE_DATA_API_KEY || '',
   yahooAllowInsecureTls: process.env.YAHOO_ALLOW_INSECURE_TLS === 'true',
   auth: {
     username: process.env.AUTH_USERNAME || 'admin',

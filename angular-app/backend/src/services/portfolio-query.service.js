@@ -267,11 +267,11 @@ class PortfolioQueryService {
 
     try {
       if (row.section === 'FONDOS') {
-        const snapshot = await this.getFundSnapshot(lookup);
+        const snapshot = await withTimeout(this.getFundSnapshot(lookup), 8000);
         return snapshot ? applyFundSnapshot(row, snapshot, asOfDate) : row;
       }
 
-      const snapshot = await this.getEquitySnapshot(lookup);
+      const snapshot = await withTimeout(this.getEquitySnapshot(lookup), 8000);
       return snapshot ? applyEquitySnapshot(row, snapshot) : row;
     } catch {
       return row;
@@ -330,7 +330,7 @@ class PortfolioQueryService {
     }
 
     try {
-      const series = await this.getMarketSeries(benchmarkConfig.symbol);
+      const series = await withTimeout(this.getMarketSeries(benchmarkConfig.symbol), 8000);
       return buildBenchmarkOverview(rows, benchmarkConfig, series);
     } catch {
       return null;
@@ -1596,6 +1596,13 @@ function roundPercent(value) {
 function round(value, digits) {
   const factor = 10 ** digits;
   return Math.round(value * factor) / factor;
+}
+
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(`Timeout after ${ms}ms`)), ms))
+  ]);
 }
 
 module.exports = { PortfolioQueryService };

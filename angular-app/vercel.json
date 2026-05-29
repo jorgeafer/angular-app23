@@ -13,5 +13,10 @@
   },
   "env": {
     "NODE_ENV": "production"
+  },
+  "build": {
+    "env": {
+      "NODE_VERSION": "22"
+    }
   }
 }
