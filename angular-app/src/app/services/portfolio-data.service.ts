@@ -3,6 +3,7 @@ import { HttpClient, HttpParams } from '@angular/common/http';
 import { firstValueFrom, map } from 'rxjs';
 import {
   CreateFundPayload,
+  CreateEquityPayload,
   EditablePortfolioField,
   PortfolioDataset,
   PortfolioImportPreview,
@@ -83,6 +84,17 @@ export class PortfolioDataService {
   async createFund(payload: CreateFundPayload, portfolioKey = 'main'): Promise<PortfolioRow> {
     const created = await firstValueFrom(
       this.http.post<PortfolioRow>(`${this.getBaseUrl(portfolioKey)}/assets`, payload).pipe(map((row) => this.mapRow(row)))
+    );
+
+    this.datasetPromises.clear();
+    return created;
+  }
+
+  async createEquity(payload: CreateEquityPayload, portfolioKey = 'main'): Promise<PortfolioRow> {
+    const created = await firstValueFrom(
+      this.http
+        .post<PortfolioRow>(`${this.getBaseUrl(portfolioKey)}/assets`, { ...payload, section: 'ACCIONES' })
+        .pipe(map((row) => this.mapRow(row)))
     );
 
     this.datasetPromises.clear();

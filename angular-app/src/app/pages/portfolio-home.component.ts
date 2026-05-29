@@ -8,6 +8,7 @@ import {
   PortfolioBenchmarkSeriesPoint,
   PortfolioBenchmarkOverview,
   CreateFundPayload,
+  CreateEquityPayload,
   EditablePortfolioField,
   PortfolioImportPreview,
   PortfolioNavPoint,
@@ -147,9 +148,18 @@ export class PortfolioHomeComponent implements OnInit {
   protected createFundErrorMessage = '';
   protected deleteFundErrorMessage = '';
   protected fundPendingDeletion: PortfolioRow | null = null;
+  protected isEquityEditMode = false;
+  protected isAddEquityModalOpen = false;
+  protected isCreatingEquity = false;
+  protected isDeleteEquityModalOpen = false;
+  protected isDeletingEquity = false;
+  protected createEquityErrorMessage = '';
+  protected deleteEquityErrorMessage = '';
+  protected equityPendingDeletion: PortfolioRow | null = null;
   protected editingCell: { rowId: string; field: EditablePortfolioField; draftValue: string } | null = null;
   protected savingCellKey = '';
   protected newFundForm: CreateFundPayload = this.createEmptyFundForm();
+  protected newEquityForm: CreateEquityPayload = this.createEmptyEquityForm();
   protected portfolioTrendHoveredPointIndex: number | null = null;
   protected benchmarkHoveredPointIndex: number | null = null;
 
@@ -809,6 +819,95 @@ export class PortfolioHomeComponent implements OnInit {
       this.createFundErrorMessage = error instanceof Error ? error.message : 'No se pudo añadir el fondo.';
     } finally {
       this.isCreatingFund = false;
+    }
+  }
+
+  protected isEditMode(sectionTitle: string): boolean {
+    if (sectionTitle === 'FONDOS') return this.isFundEditMode;
+    if (sectionTitle === 'ACCIONES') return this.isEquityEditMode;
+    return false;
+  }
+
+  protected toggleEquityEditMode(): void {
+    this.isEquityEditMode = !this.isEquityEditMode;
+  }
+
+  protected openAddEquityModal(): void {
+    this.createEquityErrorMessage = '';
+    this.newEquityForm = this.createEmptyEquityForm();
+    this.isAddEquityModalOpen = true;
+  }
+
+  protected closeAddEquityModal(): void {
+    if (this.isCreatingEquity) return;
+    this.isAddEquityModalOpen = false;
+    this.createEquityErrorMessage = '';
+    this.newEquityForm = this.createEmptyEquityForm();
+  }
+
+  protected updateNewEquityField(field: keyof CreateEquityPayload, value: string): void {
+    this.newEquityForm = { ...this.newEquityForm, [field]: value };
+  }
+
+  protected async submitNewEquity(): Promise<void> {
+    const payload: CreateEquityPayload = {
+      name: this.newEquityForm.name.trim(),
+      ticker: this.newEquityForm.ticker.trim().toUpperCase(),
+      isin: this.newEquityForm.isin.trim().toUpperCase(),
+      currency: this.newEquityForm.currency.trim().toUpperCase(),
+      totalInvested: this.newEquityForm.totalInvested.trim(),
+      shares: this.newEquityForm.shares.trim()
+    };
+
+    if (!payload.name || !payload.ticker || !payload.currency || !payload.totalInvested || !payload.shares) {
+      this.createEquityErrorMessage = 'Completa los campos obligatorios para añadir la acción.';
+      return;
+    }
+
+    this.isCreatingEquity = true;
+    this.createEquityErrorMessage = '';
+
+    try {
+      await this.portfolioDataService.createEquity(payload, this.portfolioKey);
+      this.isAddEquityModalOpen = false;
+      this.newEquityForm = this.createEmptyEquityForm();
+      await this.loadPortfolio(true);
+    } catch (error) {
+      this.createEquityErrorMessage = error instanceof Error ? error.message : 'No se pudo añadir la acción.';
+    } finally {
+      this.isCreatingEquity = false;
+    }
+  }
+
+  protected openDeleteEquityModal(row: PortfolioRow, event?: Event): void {
+    event?.stopPropagation();
+    this.deleteEquityErrorMessage = '';
+    this.equityPendingDeletion = row;
+    this.isDeleteEquityModalOpen = true;
+  }
+
+  protected closeDeleteEquityModal(): void {
+    if (this.isDeletingEquity) return;
+    this.isDeleteEquityModalOpen = false;
+    this.deleteEquityErrorMessage = '';
+    this.equityPendingDeletion = null;
+  }
+
+  protected async confirmDeleteEquity(): Promise<void> {
+    if (!this.equityPendingDeletion) return;
+
+    this.isDeletingEquity = true;
+    this.deleteEquityErrorMessage = '';
+
+    try {
+      await this.portfolioDataService.deleteFund(this.equityPendingDeletion.id, this.portfolioKey);
+      this.isDeleteEquityModalOpen = false;
+      this.equityPendingDeletion = null;
+      await this.loadPortfolio(true);
+    } catch (error) {
+      this.deleteEquityErrorMessage = error instanceof Error ? error.message : 'No se pudo eliminar la acción.';
+    } finally {
+      this.isDeletingEquity = false;
     }
   }
 
@@ -1619,6 +1718,17 @@ export class PortfolioHomeComponent implements OnInit {
       name: '',
       isin: '',
       type: '',
+      currency: 'EUR',
+      totalInvested: '',
+      shares: ''
+    };
+  }
+
+  private createEmptyEquityForm(): CreateEquityPayload {
+    return {
+      name: '',
+      ticker: '',
+      isin: '',
       currency: 'EUR',
       totalInvested: '',
       shares: ''

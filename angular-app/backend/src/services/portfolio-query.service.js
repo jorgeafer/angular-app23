@@ -221,15 +221,41 @@ class PortfolioQueryService {
     return this.enrichRow(createdRow);
   }
 
+  async createEquityPosition(payload = {}) {
+    const input = normalizeCreateEquityPayload(payload);
+
+    if (!input.name) throw new HttpError(400, 'Equity name is required');
+    if (!input.ticker) throw new HttpError(400, 'Ticker is required');
+    if (!input.currency) throw new HttpError(400, 'Currency is required');
+
+    if (!Number.isFinite(input.totalInvestedValue) || input.totalInvestedValue <= 0) {
+      throw new HttpError(400, 'Invested capital must be a valid positive number');
+    }
+
+    if (!Number.isFinite(input.sharesValue) || input.sharesValue <= 0) {
+      throw new HttpError(400, 'Shares must be a valid positive number');
+    }
+
+    const existingRows = await this.repository.getPositions();
+    const duplicate = existingRows.find(
+      (row) => row.section === 'ACCIONES' && String(row.ticker || '').trim().toUpperCase() === input.ticker
+    );
+
+    if (duplicate) {
+      throw new HttpError(409, `Ya existe una accion con el ticker ${input.ticker}`);
+    }
+
+    const createdRow = createEquityRow(input);
+    await this.repository.upsertPosition(createdRow);
+
+    return this.enrichRow(createdRow);
+  }
+
   async deleteFundPosition(id) {
     const storedRow = await this.repository.getPositionById(id);
 
     if (!storedRow) {
       throw new HttpError(404, 'Asset not found');
-    }
-
-    if (storedRow.section !== 'FONDOS') {
-      throw new HttpError(400, 'Only fund positions can be deleted');
     }
 
     await this.repository.deletePositionById(id);
@@ -1596,6 +1622,60 @@ function roundPercent(value) {
 function round(value, digits) {
   const factor = 10 ** digits;
   return Math.round(value * factor) / factor;
+}
+
+function normalizeCreateEquityPayload(payload) {
+  const totalInvestedValue = parseEditableInput(payload?.totalInvested);
+  const sharesValue = parseEditableInput(payload?.shares);
+
+  return {
+    name: String(payload?.name ?? '').trim(),
+    ticker: String(payload?.ticker ?? '').trim().toUpperCase(),
+    isin: String(payload?.isin ?? '').trim().toUpperCase(),
+    currency: String(payload?.currency ?? '').trim().toUpperCase(),
+    totalInvestedValue,
+    sharesValue
+  };
+}
+
+function createEquityRow(input) {
+  const unitValueNumber = input.sharesValue > 0 ? input.totalInvestedValue / input.sharesValue : 0;
+  const marketDate = new Date().toISOString().slice(0, 10);
+  const derivedMetrics = buildDerivedMetrics({
+    sharesValue: input.sharesValue,
+    unitValueNumber,
+    totalInvestedValue: input.totalInvestedValue
+  });
+
+  return {
+    id: slugify(`ACCIONES-${input.name}-${input.ticker || input.isin || 'sin-id'}-${Date.now()}`),
+    section: 'ACCIONES',
+    assetKind: 'equity',
+    name: input.name,
+    isin: input.isin || undefined,
+    ticker: input.ticker || undefined,
+    symbol: input.ticker || undefined,
+    performanceId: undefined,
+    shares: formatEditableShares(input.sharesValue, String(input.sharesValue)),
+    currency: input.currency,
+    type: 'Accion',
+    investmentClass: undefined,
+    totalInvested: formatCurrency(input.totalInvestedValue),
+    investedWeight: formatPercent(0),
+    marketDate,
+    unitValue: formatNumber(unitValueNumber, Math.max(2, countDecimals(unitValueNumber))),
+    totalValuation: derivedMetrics.totalValuation,
+    profitEuros: derivedMetrics.profitEuros,
+    valuationWeight: formatPercent(0),
+    totalReturn: derivedMetrics.totalReturn,
+    totalInvestedValue: roundMoney(input.totalInvestedValue),
+    totalValuationValue: derivedMetrics.totalValuationValue,
+    profitEurosValue: derivedMetrics.profitEurosValue,
+    totalReturnValue: derivedMetrics.totalReturnValue,
+    sharesValue: input.sharesValue,
+    unitValueNumber,
+    navHistory: undefined
+  };
 }
 
 function withTimeout(promise, ms) {

@@ -129,6 +129,21 @@
                     </svg>
                     Añadir
                   </button>
+                } @else if (section.title === 'ACCIONES') {
+                  <button type="button" class="edit-toggle" (click)="toggleEquityEditMode()">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path
+                        d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm17.71-10.04a1.003 1.003 0 0 0 0-1.42l-2.5-2.5a1.003 1.003 0 0 0-1.42 0l-1.96 1.96 3.75 3.75 2.13-1.79z"
+                      />
+                    </svg>
+                    {{ isEquityEditMode ? 'Cerrar edicion' : 'Editar' }}
+                  </button>
+                  <button type="button" class="edit-toggle edit-toggle--primary" (click)="openAddEquityModal()">
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M19 11H13V5h-2v6H5v2h6v6h2v-6h6z" />
+                    </svg>
+                    Añadir
+                  </button>
                 }
                 <span class="counter">{{ getSectionTotalRows(section) }} posiciones visibles</span>
               </div>
@@ -216,7 +231,7 @@
                             </button>
                           } @else {
                             <span class="cell-meta">Tipo: {{ row.type || 'Sin tipo' }}</span>
-                            @if (section.title === 'FONDOS' && isFundEditMode) {
+                            @if (isEditMode(section.title)) {
                               <button
                                 type="button"
                                 class="icon-button"
@@ -257,7 +272,7 @@
                             </button>
                           } @else {
                             <span class="cell-meta">Divisa: {{ row.currency || 'N/D' }}</span>
-                            @if (section.title === 'FONDOS' && isFundEditMode) {
+                            @if (isEditMode(section.title)) {
                               <button
                                 type="button"
                                 class="icon-button"
@@ -347,7 +362,7 @@
                             </button>
                           } @else {
                             <span>{{ row.shares }}</span>
-                            @if (section.title === 'FONDOS' && isFundEditMode) {
+                            @if (isEditMode(section.title)) {
                               <button
                                 type="button"
                                 class="icon-button"
@@ -387,7 +402,7 @@
                             </button>
                           } @else {
                             <span>{{ row.totalInvested }}</span>
-                            @if (section.title === 'FONDOS' && isFundEditMode) {
+                            @if (isEditMode(section.title)) {
                               <button
                                 type="button"
                                 class="icon-button"
@@ -433,6 +448,18 @@
                               class="icon-button icon-button--danger"
                               (click)="openDeleteFundModal(row, $event)"
                               aria-label="Eliminar fondo"
+                            >
+                              <svg viewBox="0 0 24 24" aria-hidden="true">
+                                <path d="M18 6 6 18M6 6l12 12" />
+                              </svg>
+                            </button>
+                          }
+                          @if (section.title === 'ACCIONES' && isEquityEditMode) {
+                            <button
+                              type="button"
+                              class="icon-button icon-button--danger"
+                              (click)="openDeleteEquityModal(row, $event)"
+                              aria-label="Eliminar accion"
                             >
                               <svg viewBox="0 0 24 24" aria-hidden="true">
                                 <path d="M18 6 6 18M6 6l12 12" />
@@ -976,6 +1003,131 @@
         </button>
         <button type="button" class="modal-button modal-button--danger" (click)="confirmDeleteFund()" [disabled]="isDeletingFund">
           {{ isDeletingFund ? 'Eliminando...' : 'Continuar' }}
+        </button>
+      </footer>
+    </section>
+  </div>
+}
+
+@if (isAddEquityModalOpen) {
+  <div class="modal-backdrop" (click)="closeAddEquityModal()">
+    <section class="modal-card" (click)="$event.stopPropagation()">
+      <header class="modal-card__header">
+        <div>
+          <p class="eyebrow">Nueva accion</p>
+          <h2>Añadir accion</h2>
+        </div>
+        <button type="button" class="modal-close" (click)="closeAddEquityModal()" [disabled]="isCreatingEquity" aria-label="Cerrar">
+          ×
+        </button>
+      </header>
+
+      <div class="modal-form">
+        <label class="field">
+          <span>Nombre</span>
+          <input
+            type="text"
+            [ngModel]="newEquityForm.name"
+            (ngModelChange)="updateNewEquityField('name', $event)"
+            [disabled]="isCreatingEquity"
+          />
+        </label>
+
+        <label class="field">
+          <span>Ticker <span class="field__required">*</span></span>
+          <input
+            type="text"
+            [ngModel]="newEquityForm.ticker"
+            (ngModelChange)="updateNewEquityField('ticker', $event)"
+            [disabled]="isCreatingEquity"
+            placeholder="Ej: SAN, AAPL"
+          />
+        </label>
+
+        <label class="field">
+          <span>ISIN <span class="field__optional">(opcional)</span></span>
+          <input
+            type="text"
+            [ngModel]="newEquityForm.isin"
+            (ngModelChange)="updateNewEquityField('isin', $event)"
+            [disabled]="isCreatingEquity"
+          />
+        </label>
+
+        <label class="field">
+          <span>Moneda</span>
+          <input
+            type="text"
+            [ngModel]="newEquityForm.currency"
+            (ngModelChange)="updateNewEquityField('currency', $event)"
+            [disabled]="isCreatingEquity"
+          />
+        </label>
+
+        <label class="field">
+          <span>Capital invertido</span>
+          <input
+            type="text"
+            [ngModel]="newEquityForm.totalInvested"
+            (ngModelChange)="updateNewEquityField('totalInvested', $event)"
+            [disabled]="isCreatingEquity"
+          />
+        </label>
+
+        <label class="field">
+          <span>Número de acciones</span>
+          <input
+            type="text"
+            [ngModel]="newEquityForm.shares"
+            (ngModelChange)="updateNewEquityField('shares', $event)"
+            [disabled]="isCreatingEquity"
+          />
+        </label>
+      </div>
+
+      @if (createEquityErrorMessage) {
+        <p class="modal-error app-message app-message--error">{{ createEquityErrorMessage }}</p>
+      }
+
+      <footer class="modal-card__actions">
+        <button type="button" class="modal-button modal-button--ghost" (click)="closeAddEquityModal()" [disabled]="isCreatingEquity">
+          Cancelar
+        </button>
+        <button type="button" class="modal-button modal-button--primary" (click)="submitNewEquity()" [disabled]="isCreatingEquity">
+          {{ isCreatingEquity ? 'Añadiendo...' : 'Añadir' }}
+        </button>
+      </footer>
+    </section>
+  </div>
+}
+
+@if (isDeleteEquityModalOpen && equityPendingDeletion) {
+  <div class="modal-backdrop" (click)="closeDeleteEquityModal()">
+    <section class="modal-card modal-card--confirm" (click)="$event.stopPropagation()">
+      <header class="modal-card__header">
+        <div>
+          <p class="eyebrow">Eliminar accion</p>
+          <h2>¿Seguro que quieres eliminarla?</h2>
+        </div>
+        <button type="button" class="modal-close" (click)="closeDeleteEquityModal()" [disabled]="isDeletingEquity" aria-label="Cerrar">
+          ×
+        </button>
+      </header>
+
+      <p class="modal-copy">
+        Se eliminará <strong>{{ equityPendingDeletion.name }}</strong> de la base de datos y la tabla se actualizará al momento.
+      </p>
+
+      @if (deleteEquityErrorMessage) {
+        <p class="modal-error app-message app-message--error">{{ deleteEquityErrorMessage }}</p>
+      }
+
+      <footer class="modal-card__actions">
+        <button type="button" class="modal-button modal-button--ghost" (click)="closeDeleteEquityModal()" [disabled]="isDeletingEquity">
+          Cancelar
+        </button>
+        <button type="button" class="modal-button modal-button--danger" (click)="confirmDeleteEquity()" [disabled]="isDeletingEquity">
+          {{ isDeletingEquity ? 'Eliminando...' : 'Continuar' }}
         </button>
       </footer>
     </section>

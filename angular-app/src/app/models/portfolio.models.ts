@@ -14,6 +14,15 @@ export interface CreateFundPayload {
   shares: string;
 }
 
+export interface CreateEquityPayload {
+  name: string;
+  ticker: string;
+  isin: string;
+  currency: string;
+  totalInvested: string;
+  shares: string;
+}
+
 export type PortfolioOperationType = 'buy' | 'sell' | 'dividend' | 'fee';
 
 export interface PortfolioOperation {

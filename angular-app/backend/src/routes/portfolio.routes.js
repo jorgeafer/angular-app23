@@ -43,7 +43,10 @@ function createPortfolioRouter({
 
   router.post('/assets', async (req, res, next) => {
     try {
-      const asset = await queryService.createFundPosition(req.body);
+      const section = String(req.body?.section || '').toUpperCase();
+      const asset = section === 'ACCIONES'
+        ? await queryService.createEquityPosition(req.body)
+        : await queryService.createFundPosition(req.body);
       res.status(201).json(asset);
     } catch (error) {
       next(error);
