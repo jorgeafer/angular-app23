@@ -162,6 +162,26 @@ export interface PortfolioQualityOverview {
   missingHistoryCount: number;
 }
 
+export interface PortfolioImportPreview {
+  workbookAvailable: boolean;
+  workbookName: string;
+  sheetName: string | null;
+  detectedRows: number;
+  sectionCounts: {
+    funds: number;
+    equities: number;
+  };
+  lastWorkbookUpdate: string | null;
+  warnings: string[];
+  canImport: boolean;
+}
+
+export interface PortfolioImportResult {
+  imported: boolean;
+  positions?: number;
+  sourceMissing?: boolean;
+}
+
 export interface PortfolioDataset {
   lastUpdated: string;
   lastImportedAt?: string | null;

@@ -9,6 +9,7 @@ import {
   PortfolioBenchmarkOverview,
   CreateFundPayload,
   EditablePortfolioField,
+  PortfolioImportPreview,
   PortfolioNavPoint,
   PortfolioDataset,
   PortfolioQualityOverview,
@@ -31,6 +32,7 @@ type SortField =
 
 type PortfolioTrendRange = '1m' | '3m' | '6m' | 'ytd' | '1y' | '3y' | 'all';
 type PortfolioTrendScope = 'all' | 'funds' | 'equities';
+type ComparatorSide = 'left' | 'right';
 
 @Component({
   selector: 'app-portfolio-home',
@@ -129,6 +131,13 @@ export class PortfolioHomeComponent implements OnInit {
     missingHistoryCount: 0
   };
   protected availableTypes: string[] = [];
+  protected importPreview: PortfolioImportPreview | null = null;
+  protected isImportPreviewLoading = false;
+  protected isImportingWorkbook = false;
+  protected importActionMessage = '';
+  protected importActionError = '';
+  protected selectedComparatorLeftId = '';
+  protected selectedComparatorRightId = '';
   protected isFundEditMode = false;
   protected isAddFundModalOpen = false;
   protected isCreatingFund = false;
@@ -223,6 +232,11 @@ export class PortfolioHomeComponent implements OnInit {
   protected formatSignedPercentage(value: number, digits = 2): string {
     const sign = value > 0 ? '+' : '';
     return `${sign}${this.formatPercentage(value, digits)}`;
+  }
+
+  protected formatSignedCurrency(value: number): string {
+    const sign = value > 0 ? '+' : '';
+    return `${sign}${formatCurrencyEs(value)}`;
   }
 
   protected getSummaryAssetRow(label: string): PortfolioRow | undefined {
@@ -575,6 +589,119 @@ export class PortfolioHomeComponent implements OnInit {
     return this.selectedDate !== this.appliedDate;
   }
 
+  protected get comparatorRows(): PortfolioRow[] {
+    return [...(this.displayDataset?.rows ?? [])].sort((left, right) => right.totalValuationValue - left.totalValuationValue);
+  }
+
+  protected get comparatorLeftRow(): PortfolioRow | null {
+    return this.comparatorRows.find((row) => row.id === this.selectedComparatorLeftId) ?? null;
+  }
+
+  protected get comparatorRightRow(): PortfolioRow | null {
+    return this.comparatorRows.find((row) => row.id === this.selectedComparatorRightId) ?? null;
+  }
+
+  protected get temporalMetrics(): {
+    investedCapital: number;
+    currentProfit: number;
+    monthChange: number;
+    ytdChange: number;
+    maxDrawdown: number;
+    annualizedVolatility: number;
+    growthShare: number;
+  } {
+    const series = this.filteredPortfolioTrendSeries;
+    const currentProfit = series.at(-1)?.profitEuros ?? 0;
+    const investedCapital = series.at(-1)?.totalInvested ?? this.getPortfolioTrendRows().reduce((sum, row) => sum + row.totalInvestedValue, 0);
+    const valuationSeries = series.map((point) => point.totalValuation);
+    const monthSeries = this.sliceTrendSeriesByRange(series, '1m');
+    const ytdSeries = this.sliceTrendSeriesByRange(series, 'ytd');
+
+    return {
+      investedCapital,
+      currentProfit,
+      monthChange: this.computeTrendDelta(monthSeries),
+      ytdChange: this.computeTrendDelta(ytdSeries),
+      maxDrawdown: this.computeMaxDrawdown(valuationSeries),
+      annualizedVolatility: this.computeAnnualizedVolatility(valuationSeries),
+      growthShare: investedCapital + currentProfit > 0
+        ? this.round((currentProfit / (investedCapital + currentProfit)) * 100, 2)
+        : 0
+    };
+  }
+
+  protected get monthlySnapshots(): Array<{ label: string; profitEuros: number; delta: number }> {
+    const series = this.filteredPortfolioTrendSeries;
+
+    if (!series.length) {
+      return [];
+    }
+
+    const grouped = new Map<string, { date: string; profitEuros: number }>();
+
+    for (const point of series) {
+      const key = point.date.slice(0, 7);
+      grouped.set(key, { date: point.date, profitEuros: point.profitEuros });
+    }
+
+    const monthEndPoints = Array.from(grouped.entries())
+      .sort((left, right) => left[0].localeCompare(right[0]))
+      .map(([, value]) => value)
+      .slice(-6);
+
+    return monthEndPoints.map((point, index) => ({
+      label: formatDateEs(point.date).slice(3),
+      profitEuros: point.profitEuros,
+      delta: index === 0 ? 0 : this.round(point.profitEuros - monthEndPoints[index - 1].profitEuros, 2)
+    }));
+  }
+
+  protected updateComparatorSelection(side: ComparatorSide, nextId: string): void {
+    if (side === 'left') {
+      this.selectedComparatorLeftId = nextId;
+
+      if (nextId && nextId === this.selectedComparatorRightId) {
+        this.selectedComparatorRightId = this.comparatorRows.find((row) => row.id !== nextId)?.id ?? '';
+      }
+
+      return;
+    }
+
+    this.selectedComparatorRightId = nextId;
+
+    if (nextId && nextId === this.selectedComparatorLeftId) {
+      this.selectedComparatorLeftId = this.comparatorRows.find((row) => row.id !== nextId)?.id ?? '';
+    }
+  }
+
+  protected async runWorkbookImport(): Promise<void> {
+    if (this.isImportingWorkbook) {
+      return;
+    }
+
+    this.importActionMessage = '';
+    this.importActionError = '';
+    this.isImportingWorkbook = true;
+
+    try {
+      const result = await this.portfolioDataService.importPortfolio(this.portfolioKey);
+
+      if (result.sourceMissing) {
+        this.importActionError = 'No se encontro el fichero base para importar en este entorno.';
+        return;
+      }
+
+      await this.loadPortfolio(true);
+      this.importActionMessage = result.imported
+        ? `Importacion completada con ${result.positions ?? 0} posiciones actualizadas.`
+        : 'No habia cambios nuevos que aplicar en la importacion.';
+    } catch (error) {
+      this.importActionError = error instanceof Error ? error.message : 'No se pudo sincronizar el Excel.';
+    } finally {
+      this.isImportingWorkbook = false;
+    }
+  }
+
   protected toggleFundEditMode(): void {
     this.isFundEditMode = !this.isFundEditMode;
 
@@ -748,14 +875,29 @@ export class PortfolioHomeComponent implements OnInit {
     this.applyDateToDataset();
   }
 
+  private async loadImportPreview(): Promise<void> {
+    this.isImportPreviewLoading = true;
+
+    try {
+      this.importPreview = await this.portfolioDataService.getImportPreview(this.portfolioKey);
+    } catch {
+      this.importPreview = null;
+    } finally {
+      this.isImportPreviewLoading = false;
+    }
+  }
+
   private async loadPortfolio(forceRefresh = false): Promise<void> {
     this.isLoading = true;
     this.errorMessage = '';
 
     try {
-      this.sourceDataset = forceRefresh
-        ? await this.portfolioDataService.refreshPortfolio(this.portfolioKey)
-        : await this.portfolioDataService.getPortfolio(this.portfolioKey);
+      const datasetPromise = forceRefresh
+        ? this.portfolioDataService.refreshPortfolio(this.portfolioKey)
+        : this.portfolioDataService.getPortfolio(this.portfolioKey);
+
+      const [dataset] = await Promise.all([datasetPromise, this.loadImportPreview()]);
+      this.sourceDataset = dataset;
       this.availableTypes = ['TODOS', ...new Set(this.sourceDataset.rows.map((row) => row.type).filter(Boolean))];
       this.applyDateToDataset();
     } catch (error) {
@@ -787,6 +929,7 @@ export class PortfolioHomeComponent implements OnInit {
     this.benchmarkOverview = this.displayDataset.benchmarkOverview;
     this.analytics = this.displayDataset.analytics;
     this.quality = this.displayDataset.quality;
+    this.ensureComparatorSelection();
     this.updateFilters();
   }
 
@@ -882,7 +1025,7 @@ export class PortfolioHomeComponent implements OnInit {
     return null;
   }
 
-  private get filteredPortfolioTrendSeries(): Array<{ date: string; profitEuros: number }> {
+  private get filteredPortfolioTrendSeries(): Array<{ date: string; profitEuros: number; totalValuation: number; totalInvested: number }> {
     const rows = this.getPortfolioTrendRows();
 
     if (!rows.length) {
@@ -901,6 +1044,7 @@ export class PortfolioHomeComponent implements OnInit {
 
     const lastDate = new Date(`${allDates[allDates.length - 1]}T00:00:00`);
     const startDate = this.resolveTrendStartDate(lastDate, this.selectedPortfolioTrendRange);
+    const totalInvested = this.round(rows.reduce((sum, row) => sum + row.totalInvestedValue, 0), 2);
     const pointsByRow = rows.map((row) => ({
       row,
       history: [...(row.navHistory ?? [])].sort((left, right) => left.date.localeCompare(right.date)),
@@ -908,7 +1052,7 @@ export class PortfolioHomeComponent implements OnInit {
       latestClose: null as number | null
     }));
 
-    const series: Array<{ date: string; profitEuros: number }> = [];
+    const series: Array<{ date: string; profitEuros: number; totalValuation: number; totalInvested: number }> = [];
 
     for (const date of allDates) {
       const currentDate = new Date(`${date}T00:00:00`);
@@ -928,6 +1072,7 @@ export class PortfolioHomeComponent implements OnInit {
       }
 
       let totalProfitEuros = 0;
+      let totalValuation = 0;
       let hasValue = false;
 
       for (const pointState of pointsByRow) {
@@ -944,13 +1089,17 @@ export class PortfolioHomeComponent implements OnInit {
         }
 
         hasValue = true;
-        totalProfitEuros += this.round((pointState.row.sharesValue * pointState.latestClose) - pointState.row.totalInvestedValue, 2);
+        const rowValuation = this.round(pointState.row.sharesValue * pointState.latestClose, 2);
+        totalValuation += rowValuation;
+        totalProfitEuros += this.round(rowValuation - pointState.row.totalInvestedValue, 2);
       }
 
       if (hasValue) {
         series.push({
           date,
-          profitEuros: this.round(totalProfitEuros, 2)
+          profitEuros: this.round(totalProfitEuros, 2),
+          totalValuation: this.round(totalValuation, 2),
+          totalInvested
         });
       }
     }
@@ -1011,6 +1160,78 @@ export class PortfolioHomeComponent implements OnInit {
     }
   }
 
+  private sliceTrendSeriesByRange(
+    series: Array<{ date: string; profitEuros: number; totalValuation: number; totalInvested: number }>,
+    range: PortfolioTrendRange
+  ): Array<{ date: string; profitEuros: number; totalValuation: number; totalInvested: number }> {
+    if (range === 'all' || !series.length) {
+      return series;
+    }
+
+    const lastDate = new Date(`${series[series.length - 1].date}T00:00:00`);
+    const startDate = this.resolveTrendStartDate(lastDate, range);
+    return series.filter((point) => new Date(`${point.date}T00:00:00`) >= startDate);
+  }
+
+  private computeTrendDelta(
+    series: Array<{ date: string; profitEuros: number; totalValuation: number; totalInvested: number }>
+  ): number {
+    if (series.length < 2) {
+      return 0;
+    }
+
+    return this.round(series[series.length - 1].profitEuros - series[0].profitEuros, 2);
+  }
+
+  private computeMaxDrawdown(valuationSeries: number[]): number {
+    if (valuationSeries.length < 2) {
+      return 0;
+    }
+
+    let peak = valuationSeries[0];
+    let maxDrawdown = 0;
+
+    for (const valuation of valuationSeries) {
+      peak = Math.max(peak, valuation);
+
+      if (peak <= 0) {
+        continue;
+      }
+
+      const drawdown = ((valuation - peak) / peak) * 100;
+      maxDrawdown = Math.min(maxDrawdown, drawdown);
+    }
+
+    return this.round(maxDrawdown, 2);
+  }
+
+  private computeAnnualizedVolatility(valuationSeries: number[]): number {
+    if (valuationSeries.length < 3) {
+      return 0;
+    }
+
+    const returns: number[] = [];
+
+    for (let index = 1; index < valuationSeries.length; index += 1) {
+      const previous = valuationSeries[index - 1];
+      const current = valuationSeries[index];
+
+      if (previous <= 0 || current <= 0) {
+        continue;
+      }
+
+      returns.push((current - previous) / previous);
+    }
+
+    if (returns.length < 2) {
+      return 0;
+    }
+
+    const mean = returns.reduce((sum, value) => sum + value, 0) / returns.length;
+    const variance = returns.reduce((sum, value) => sum + ((value - mean) ** 2), 0) / returns.length;
+    return this.round(Math.sqrt(variance) * Math.sqrt(252) * 100, 2);
+  }
+
   private buildTotals(rows: PortfolioRow[]): PortfolioSection['totals'] {
     if (!rows.length) {
       return null;
@@ -1062,6 +1283,26 @@ export class PortfolioHomeComponent implements OnInit {
         percentage: total > 0 ? (value / total) * 100 : 0
       }))
       .sort((left, right) => right.value - left.value);
+  }
+
+  private ensureComparatorSelection(): void {
+    const rows = this.comparatorRows;
+
+    if (!rows.length) {
+      this.selectedComparatorLeftId = '';
+      this.selectedComparatorRightId = '';
+      return;
+    }
+
+    const availableIds = new Set(rows.map((row) => row.id));
+
+    if (!availableIds.has(this.selectedComparatorLeftId)) {
+      this.selectedComparatorLeftId = rows[0]?.id ?? '';
+    }
+
+    if (!availableIds.has(this.selectedComparatorRightId) || this.selectedComparatorRightId === this.selectedComparatorLeftId) {
+      this.selectedComparatorRightId = rows.find((row) => row.id !== this.selectedComparatorLeftId)?.id ?? '';
+    }
   }
 
   private cloneDataset(dataset: PortfolioDataset): PortfolioDataset {

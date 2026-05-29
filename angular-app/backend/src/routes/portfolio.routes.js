@@ -99,6 +99,15 @@ function createPortfolioRouter({
   });
 
   if (enableImport && importService) {
+    router.get('/import/preview', async (_req, res, next) => {
+      try {
+        const preview = await importService.previewWorkbookImport();
+        res.json(preview);
+      } catch (error) {
+        next(error);
+      }
+    });
+
     router.post('/import', async (_req, res, next) => {
       try {
         const result = await importService.syncFromExcelIfNeeded(true);

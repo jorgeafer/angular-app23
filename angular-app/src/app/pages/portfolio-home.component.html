@@ -585,6 +585,192 @@
           </div>
         </article>
 
+        <article class="chart-card">
+          <header>
+            <p class="eyebrow">Seguimiento</p>
+            <h2>Dashboard temporal</h2>
+          </header>
+
+          <div class="temporal-metrics-grid">
+            <div class="metric-tile">
+              <span>Capital aportado</span>
+              <strong>{{ formatPortfolioTrendValue(temporalMetrics.investedCapital) }}</strong>
+            </div>
+            <div class="metric-tile">
+              <span>Rentabilidad acumulada</span>
+              <strong [class.negative]="temporalMetrics.currentProfit < 0" [class.positive]="temporalMetrics.currentProfit > 0">
+                {{ formatSignedCurrency(temporalMetrics.currentProfit) }}
+              </strong>
+            </div>
+            <div class="metric-tile">
+              <span>Cambio ultimo mes</span>
+              <strong [class.negative]="temporalMetrics.monthChange < 0" [class.positive]="temporalMetrics.monthChange > 0">
+                {{ formatSignedCurrency(temporalMetrics.monthChange) }}
+              </strong>
+            </div>
+            <div class="metric-tile">
+              <span>Cambio YTD</span>
+              <strong [class.negative]="temporalMetrics.ytdChange < 0" [class.positive]="temporalMetrics.ytdChange > 0">
+                {{ formatSignedCurrency(temporalMetrics.ytdChange) }}
+              </strong>
+            </div>
+            <div class="metric-tile">
+              <span>Max drawdown</span>
+              <strong [class.negative]="temporalMetrics.maxDrawdown < 0">{{ formatSignedPercentage(temporalMetrics.maxDrawdown) }}</strong>
+            </div>
+            <div class="metric-tile">
+              <span>Volatilidad anualizada</span>
+              <strong>{{ formatSignedPercentage(temporalMetrics.annualizedVolatility) }}</strong>
+            </div>
+          </div>
+
+          <div class="chart-list monthly-snapshot-list">
+            @for (item of monthlySnapshots; track item.label + item.profitEuros) {
+              <div class="chart-row">
+                <div class="chart-meta">
+                  <strong>{{ item.label }}</strong>
+                  <span>Cierre {{ formatSignedCurrency(item.profitEuros) }}</span>
+                  <span [class.negative]="item.delta < 0" [class.positive]="item.delta > 0">
+                    Variacion {{ formatSignedCurrency(item.delta) }}
+                  </span>
+                </div>
+              </div>
+            } @empty {
+              <p class="portfolio-trend-empty">Todavia no hay suficiente historico para mostrar cierres mensuales.</p>
+            }
+          </div>
+        </article>
+
+        <article class="chart-card">
+          <header>
+            <p class="eyebrow">Sincronizacion</p>
+            <h2>Importacion desde Excel</h2>
+          </header>
+
+          @if (isImportPreviewLoading) {
+            <p class="portfolio-trend-empty">Comprobando el estado del fichero base...</p>
+          } @else if (importPreview) {
+            <div class="chart-list">
+              <div class="chart-row">
+                <div class="chart-meta">
+                  <strong>{{ importPreview.workbookName }}</strong>
+                  <span>{{ importPreview.workbookAvailable ? 'Disponible' : 'No disponible' }}</span>
+                  <span>
+                    {{ importPreview.detectedRows }} posiciones · {{ importPreview.sectionCounts.funds }} fondos · {{ importPreview.sectionCounts.equities }} acciones
+                  </span>
+                  @if (importPreview.lastWorkbookUpdate) {
+                    <span>Ultima modificacion {{ importPreview.lastWorkbookUpdate }}</span>
+                  }
+                </div>
+              </div>
+            </div>
+
+            @if (importPreview.warnings.length) {
+              <div class="import-warning-list">
+                @for (warning of importPreview.warnings; track warning) {
+                  <p class="app-message app-message--warning">{{ warning }}</p>
+                }
+              </div>
+            }
+
+            @if (importActionMessage) {
+              <p class="app-message app-message--success">{{ importActionMessage }}</p>
+            }
+
+            @if (importActionError) {
+              <p class="app-message app-message--error">{{ importActionError }}</p>
+            }
+
+            <div class="import-actions">
+              <button
+                type="button"
+                class="app-button-primary"
+                (click)="runWorkbookImport()"
+                [disabled]="isImportingWorkbook || !importPreview.canImport"
+              >
+                {{ isImportingWorkbook ? 'Sincronizando...' : 'Sincronizar desde Excel' }}
+              </button>
+            </div>
+          } @else {
+            <p class="portfolio-trend-empty">No se pudo leer la vista previa del fichero base en este entorno.</p>
+          }
+        </article>
+
+        <article class="chart-card">
+          <header>
+            <p class="eyebrow">Analisis</p>
+            <h2>Comparador de activos</h2>
+          </header>
+
+          @if (comparatorRows.length > 1) {
+            <div class="comparator-selectors">
+              <label class="field app-form-field">
+                <span>Activo A</span>
+                <select class="app-select" [ngModel]="selectedComparatorLeftId" (ngModelChange)="updateComparatorSelection('left', $event)">
+                  @for (row of comparatorRows; track row.id) {
+                    <option [value]="row.id">{{ row.name }}</option>
+                  }
+                </select>
+              </label>
+
+              <label class="field app-form-field">
+                <span>Activo B</span>
+                <select class="app-select" [ngModel]="selectedComparatorRightId" (ngModelChange)="updateComparatorSelection('right', $event)">
+                  @for (row of comparatorRows; track row.id) {
+                    <option [value]="row.id">{{ row.name }}</option>
+                  }
+                </select>
+              </label>
+            </div>
+
+            @if (comparatorLeftRow && comparatorRightRow) {
+              <div class="comparator-grid">
+                <div class="comparator-grid__header"></div>
+                <div class="comparator-grid__header">{{ comparatorLeftRow.name }}</div>
+                <div class="comparator-grid__header">{{ comparatorRightRow.name }}</div>
+
+                <span class="comparator-grid__label">Valoracion</span>
+                <strong>{{ comparatorLeftRow.totalValuation }}</strong>
+                <strong>{{ comparatorRightRow.totalValuation }}</strong>
+
+                <span class="comparator-grid__label">Rentabilidad total</span>
+                <strong [class.negative]="comparatorLeftRow.totalReturnValue < 0" [class.positive]="comparatorLeftRow.totalReturnValue > 0">
+                  {{ comparatorLeftRow.totalReturn }}
+                </strong>
+                <strong [class.negative]="comparatorRightRow.totalReturnValue < 0" [class.positive]="comparatorRightRow.totalReturnValue > 0">
+                  {{ comparatorRightRow.totalReturn }}
+                </strong>
+
+                <span class="comparator-grid__label">Rentabilidad EUR</span>
+                <strong [class.negative]="comparatorLeftRow.profitEurosValue < 0" [class.positive]="comparatorLeftRow.profitEurosValue > 0">
+                  {{ comparatorLeftRow.profitEuros }}
+                </strong>
+                <strong [class.negative]="comparatorRightRow.profitEurosValue < 0" [class.positive]="comparatorRightRow.profitEurosValue > 0">
+                  {{ comparatorRightRow.profitEuros }}
+                </strong>
+
+                <span class="comparator-grid__label">Precio medio</span>
+                <strong>{{ comparatorLeftRow.averageCost || '-' }}</strong>
+                <strong>{{ comparatorRightRow.averageCost || '-' }}</strong>
+
+                <span class="comparator-grid__label">Anualizada</span>
+                <strong [class.negative]="(comparatorLeftRow.annualizedReturnValue ?? 0) < 0" [class.positive]="(comparatorLeftRow.annualizedReturnValue ?? 0) > 0">
+                  {{ comparatorLeftRow.annualizedReturn || '-' }}
+                </strong>
+                <strong [class.negative]="(comparatorRightRow.annualizedReturnValue ?? 0) < 0" [class.positive]="(comparatorRightRow.annualizedReturnValue ?? 0) > 0">
+                  {{ comparatorRightRow.annualizedReturn || '-' }}
+                </strong>
+
+                <span class="comparator-grid__label">Peso en cartera</span>
+                <strong>{{ comparatorLeftRow.valuationWeight }}</strong>
+                <strong>{{ comparatorRightRow.valuationWeight }}</strong>
+              </div>
+            }
+          } @else {
+            <p class="portfolio-trend-empty">Necesitas al menos dos posiciones para comparar activos.</p>
+          }
+        </article>
+
       </section>
 
       <section class="portfolio-trend-card">

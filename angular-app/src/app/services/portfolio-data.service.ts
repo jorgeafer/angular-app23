@@ -1,7 +1,17 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { firstValueFrom, map } from 'rxjs';
-import { CreateFundPayload, EditablePortfolioField, PortfolioDataset, PortfolioOperation, PortfolioOperationPayload, PortfolioRow, PortfolioSection } from '../models/portfolio.models';
+import {
+  CreateFundPayload,
+  EditablePortfolioField,
+  PortfolioDataset,
+  PortfolioImportPreview,
+  PortfolioImportResult,
+  PortfolioOperation,
+  PortfolioOperationPayload,
+  PortfolioRow,
+  PortfolioSection
+} from '../models/portfolio.models';
 import {
   formatDateEs,
   normalizeCurrencyString,
@@ -137,6 +147,23 @@ export class PortfolioDataService {
     return operations;
   }
 
+  getImportPreview(portfolioKey = 'main'): Promise<PortfolioImportPreview> {
+    return firstValueFrom(
+      this.http
+        .get<PortfolioImportPreview>(`${this.getBaseUrl(portfolioKey)}/import/preview`)
+        .pipe(map((preview) => this.mapImportPreview(preview)))
+    );
+  }
+
+  async importPortfolio(portfolioKey = 'main'): Promise<PortfolioImportResult> {
+    const result = await firstValueFrom(
+      this.http.post<PortfolioImportResult>(`${this.getBaseUrl(portfolioKey)}/import`, {})
+    );
+
+    this.datasetPromises.clear();
+    return result;
+  }
+
   private getBaseUrl(portfolioKey: string): string {
     return portfolioKey === 'deva' ? '/api/deva-portfolio' : '/api/portfolio';
   }
@@ -213,6 +240,14 @@ export class PortfolioDataService {
       operationDate: formatDateEs(operation.operationDate),
       createdAt: operation.createdAt ? formatDateEs(operation.createdAt.slice(0, 10)) : operation.createdAt,
       updatedAt: operation.updatedAt ? formatDateEs(operation.updatedAt.slice(0, 10)) : operation.updatedAt
+    };
+  }
+
+  private mapImportPreview(preview: PortfolioImportPreview): PortfolioImportPreview {
+    return {
+      ...preview,
+      lastWorkbookUpdate: preview.lastWorkbookUpdate ? formatDateEs(preview.lastWorkbookUpdate.slice(0, 10)) : null,
+      warnings: [...(preview.warnings ?? [])]
     };
   }
 

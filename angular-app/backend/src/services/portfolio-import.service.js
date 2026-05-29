@@ -53,6 +53,63 @@ class PortfolioImportService {
     return { imported: true, positions: dataset.rows.length };
   }
 
+  async previewWorkbookImport() {
+    const workbookName = path.basename(this.workbookPath);
+
+    if (!this.hasWorkbook()) {
+      return {
+        workbookAvailable: false,
+        workbookName,
+        sheetName: null,
+        detectedRows: 0,
+        sectionCounts: {
+          funds: 0,
+          equities: 0
+        },
+        lastWorkbookUpdate: null,
+        warnings: ['No se ha encontrado el fichero base de importacion en el servidor local.'],
+        canImport: false
+      };
+    }
+
+    const stat = fs.statSync(this.workbookPath);
+    const dataset = this.readWorkbook();
+    const warnings = [];
+    const fundsCount = dataset.sections.find((section) => section.title === 'FONDOS')?.rows.length ?? 0;
+    const equitiesCount = dataset.sections.find((section) => section.title === 'ACCIONES')?.rows.length ?? 0;
+    const duplicatedIsins = findDuplicatedIsins(dataset.rows);
+
+    if (!fundsCount) {
+      warnings.push('La hoja no contiene fondos detectables.');
+    }
+
+    if (!equitiesCount) {
+      warnings.push('La hoja no contiene acciones detectables.');
+    }
+
+    if (!dataset.rows.length) {
+      warnings.push('La hoja existe, pero no se han detectado posiciones importables.');
+    }
+
+    if (duplicatedIsins.length) {
+      warnings.push(`Hay ISIN repetidos en el Excel: ${duplicatedIsins.slice(0, 4).join(', ')}${duplicatedIsins.length > 4 ? '...' : ''}`);
+    }
+
+    return {
+      workbookAvailable: true,
+      workbookName,
+      sheetName: 'Cartera',
+      detectedRows: dataset.rows.length,
+      sectionCounts: {
+        funds: fundsCount,
+        equities: equitiesCount
+      },
+      lastWorkbookUpdate: stat.mtime.toISOString(),
+      warnings,
+      canImport: dataset.rows.length > 0
+    };
+  }
+
   hasWorkbook() {
     return fs.existsSync(this.workbookPath);
   }
@@ -236,6 +293,24 @@ function normalizePositionType(section, type) {
   }
 
   return section === 'ACCIONES' ? 'Acción' : '';
+}
+
+function findDuplicatedIsins(rows) {
+  const counts = new Map();
+
+  for (const row of rows) {
+    const isin = String(row.isin ?? '').trim().toUpperCase();
+
+    if (!isin) {
+      continue;
+    }
+
+    counts.set(isin, (counts.get(isin) ?? 0) + 1);
+  }
+
+  return Array.from(counts.entries())
+    .filter(([, count]) => count > 1)
+    .map(([isin]) => isin);
 }
 
 module.exports = { PortfolioImportService };
