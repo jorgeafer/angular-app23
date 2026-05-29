@@ -648,52 +648,50 @@
           </header>
 
           @if (isImportPreviewLoading) {
-            <p class="portfolio-trend-empty">Comprobando el estado del fichero base...</p>
+            <p class="portfolio-trend-empty">Cargando estado actual...</p>
           } @else if (importPreview) {
             <div class="chart-list">
               <div class="chart-row">
                 <div class="chart-meta">
-                  <strong>{{ importPreview.workbookName }}</strong>
-                  <span>{{ importPreview.workbookAvailable ? 'Disponible' : 'No disponible' }}</span>
+                  <strong>Base de datos actual</strong>
                   <span>
-                    {{ importPreview.detectedRows }} posiciones · {{ importPreview.sectionCounts.funds }} fondos · {{ importPreview.sectionCounts.equities }} acciones
+                    {{ importPreview.positionCount }} posiciones · {{ importPreview.sectionCounts.funds }} fondos · {{ importPreview.sectionCounts.equities }} acciones
                   </span>
-                  @if (importPreview.lastWorkbookUpdate) {
-                    <span>Ultima modificacion {{ importPreview.lastWorkbookUpdate }}</span>
+                  @if (importPreview.lastImportedAt) {
+                    <span>Ultima importacion: {{ importPreview.lastImportedAt }}</span>
                   }
                 </div>
               </div>
             </div>
-
-            @if (importPreview.warnings.length) {
-              <div class="import-warning-list">
-                @for (warning of importPreview.warnings; track warning) {
-                  <p class="app-message app-message--warning">{{ warning }}</p>
-                }
-              </div>
-            }
-
-            @if (importActionMessage) {
-              <p class="app-message app-message--success">{{ importActionMessage }}</p>
-            }
-
-            @if (importActionError) {
-              <p class="app-message app-message--error">{{ importActionError }}</p>
-            }
-
-            <div class="import-actions">
-              <button
-                type="button"
-                class="app-button-primary"
-                (click)="runWorkbookImport()"
-                [disabled]="isImportingWorkbook || !importPreview.canImport"
-              >
-                {{ isImportingWorkbook ? 'Sincronizando...' : 'Sincronizar desde Excel' }}
-              </button>
-            </div>
-          } @else {
-            <p class="portfolio-trend-empty">No se pudo leer la vista previa del fichero base en este entorno.</p>
           }
+
+          @if (importActionMessage) {
+            <p class="app-message app-message--success">{{ importActionMessage }}</p>
+          }
+
+          @if (importActionError) {
+            <p class="app-message app-message--error">{{ importActionError }}</p>
+          }
+
+          <div class="import-actions">
+            <label class="app-button-secondary import-file-label">
+              {{ selectedImportFile ? selectedImportFile.name : 'Seleccionar fichero Excel' }}
+              <input
+                type="file"
+                accept=".xlsx,.xls"
+                (change)="onImportFileSelected($event)"
+                style="display: none"
+              />
+            </label>
+            <button
+              type="button"
+              class="app-button-primary"
+              (click)="runWorkbookImport()"
+              [disabled]="isImportingWorkbook || !selectedImportFile"
+            >
+              {{ isImportingWorkbook ? 'Importando...' : 'Importar Excel' }}
+            </button>
+          </div>
         </article>
 
         <article class="chart-card">

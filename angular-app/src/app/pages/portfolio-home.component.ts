@@ -136,6 +136,7 @@ export class PortfolioHomeComponent implements OnInit {
   protected isImportingWorkbook = false;
   protected importActionMessage = '';
   protected importActionError = '';
+  protected selectedImportFile: File | null = null;
   protected selectedComparatorLeftId = '';
   protected selectedComparatorRightId = '';
   protected isFundEditMode = false;
@@ -674,8 +675,15 @@ export class PortfolioHomeComponent implements OnInit {
     }
   }
 
+  protected onImportFileSelected(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    this.selectedImportFile = input.files?.[0] ?? null;
+    this.importActionMessage = '';
+    this.importActionError = '';
+  }
+
   protected async runWorkbookImport(): Promise<void> {
-    if (this.isImportingWorkbook) {
+    if (this.isImportingWorkbook || !this.selectedImportFile) {
       return;
     }
 
@@ -684,7 +692,8 @@ export class PortfolioHomeComponent implements OnInit {
     this.isImportingWorkbook = true;
 
     try {
-      const result = await this.portfolioDataService.importPortfolio(this.portfolioKey);
+      const result = await this.portfolioDataService.importPortfolio(this.selectedImportFile, this.portfolioKey);
+      this.selectedImportFile = null;
 
       if (result.sourceMissing) {
         this.importActionError = 'No se encontro el fichero base para importar en este entorno.';

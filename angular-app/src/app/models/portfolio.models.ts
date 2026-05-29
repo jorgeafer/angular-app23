@@ -163,17 +163,12 @@ export interface PortfolioQualityOverview {
 }
 
 export interface PortfolioImportPreview {
-  workbookAvailable: boolean;
-  workbookName: string;
-  sheetName: string | null;
-  detectedRows: number;
+  positionCount: number;
+  lastImportedAt: string | null;
   sectionCounts: {
     funds: number;
     equities: number;
   };
-  lastWorkbookUpdate: string | null;
-  warnings: string[];
-  canImport: boolean;
 }
 
 export interface PortfolioImportResult {

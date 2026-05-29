@@ -155,9 +155,12 @@ export class PortfolioDataService {
     );
   }
 
-  async importPortfolio(portfolioKey = 'main'): Promise<PortfolioImportResult> {
+  async importPortfolio(file: File, portfolioKey = 'main'): Promise<PortfolioImportResult> {
+    const formData = new FormData();
+    formData.append('file', file);
+
     const result = await firstValueFrom(
-      this.http.post<PortfolioImportResult>(`${this.getBaseUrl(portfolioKey)}/import`, {})
+      this.http.post<PortfolioImportResult>(`${this.getBaseUrl(portfolioKey)}/import`, formData)
     );
 
     this.datasetPromises.clear();
@@ -246,8 +249,7 @@ export class PortfolioDataService {
   private mapImportPreview(preview: PortfolioImportPreview): PortfolioImportPreview {
     return {
       ...preview,
-      lastWorkbookUpdate: preview.lastWorkbookUpdate ? formatDateEs(preview.lastWorkbookUpdate.slice(0, 10)) : null,
-      warnings: [...(preview.warnings ?? [])]
+      lastImportedAt: preview.lastImportedAt ? formatDateEs(preview.lastImportedAt.slice(0, 10)) : null
     };
   }
 

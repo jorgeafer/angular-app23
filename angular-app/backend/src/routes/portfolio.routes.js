@@ -1,7 +1,13 @@
 const express = require('express');
+const multer = require('multer');
 const { HttpError } = require('../errors/http-error');
 const { PortfolioImportService } = require('../services/portfolio-import.service');
 const { PortfolioQueryService } = require('../services/portfolio-query.service');
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }
+});
 
 function createPortfolioRouter({
   importService = new PortfolioImportService(),
@@ -101,16 +107,19 @@ function createPortfolioRouter({
   if (enableImport && importService) {
     router.get('/import/preview', async (_req, res, next) => {
       try {
-        const preview = await importService.previewWorkbookImport();
+        const preview = await importService.previewFromDatabase();
         res.json(preview);
       } catch (error) {
         next(error);
       }
     });
 
-    router.post('/import', async (_req, res, next) => {
+    router.post('/import', upload.single('file'), async (req, res, next) => {
       try {
-        const result = await importService.syncFromExcelIfNeeded(true);
+        if (!req.file) {
+          throw new HttpError(400, 'Se requiere un fichero Excel (.xlsx)');
+        }
+        const result = await importService.syncFromWorkbookBuffer(req.file.buffer);
         res.json(result);
       } catch (error) {
         next(error);

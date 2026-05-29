@@ -1,9 +1,9 @@
 const crypto = require('crypto');
 const express = require('express');
 const { env } = require('../config/env');
-const { buildClearSessionCookie, buildSessionCookie } = require('../auth/auth.cookies');
+const { sign } = require('../auth/jwt');
 
-function createAuthRouter(sessionManager) {
+function createAuthRouter() {
   const router = express.Router();
 
   router.get('/session', (req, res) => {
@@ -23,24 +23,20 @@ function createAuthRouter(sessionManager) {
     const password = typeof req.body?.password === 'string' ? req.body.password : '';
 
     if (!isValidCredentials(username, password)) {
-      res.status(401).json({
-        error: 'Usuario o contrasena incorrectos'
-      });
+      res.status(401).json({ error: 'Usuario o contrasena incorrectos' });
       return;
     }
 
-    const session = sessionManager.createSession(env.auth.username);
+    const token = sign({ username: env.auth.username }, env.auth.sessionTtlMs);
 
-    res.append('Set-Cookie', buildSessionCookie(session.token, env.auth));
     res.json({
       authenticated: true,
-      username: session.username
+      username: env.auth.username,
+      token
     });
   });
 
-  router.post('/logout', (req, res) => {
-    sessionManager.revokeSession(req.authToken);
-    res.append('Set-Cookie', buildClearSessionCookie(env.auth));
+  router.post('/logout', (_req, res) => {
     res.json({ authenticated: false });
   });
 

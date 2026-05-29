@@ -1,18 +1,13 @@
-const { env } = require('../config/env');
-const { buildClearSessionCookie, parseCookies } = require('./auth.cookies');
+const { verify } = require('./jwt');
 
-function attachSession(sessionManager) {
-  return (req, res, next) => {
-    const cookies = parseCookies(req.headers.cookie || '');
-    const token = cookies[env.auth.cookieName];
-    const session = sessionManager.getSession(token);
+function attachSession() {
+  return (req, _res, next) => {
+    const authHeader = req.headers.authorization;
+    const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+    const payload = token ? verify(token) : null;
 
-    req.authToken = token || null;
-    req.authSession = session;
-
-    if (!session && token) {
-      res.append('Set-Cookie', buildClearSessionCookie(env.auth));
-    }
+    req.authToken = token;
+    req.authSession = payload ? { username: payload.username } : null;
 
     next();
   };
@@ -25,13 +20,8 @@ function requireAuth() {
       return;
     }
 
-    res.status(401).json({
-      error: 'Authentication required'
-    });
+    res.status(401).json({ error: 'Authentication required' });
   };
 }
 
-module.exports = {
-  attachSession,
-  requireAuth
-};
+module.exports = { attachSession, requireAuth };

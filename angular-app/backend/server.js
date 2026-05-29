@@ -1,7 +1,6 @@
 const express = require('express');
 const { env } = require('./src/config/env');
 const { attachSession, requireAuth } = require('./src/auth/auth.middleware');
-const { SessionManager } = require('./src/auth/session-manager');
 const { createAuthRouter } = require('./src/routes/auth.routes');
 const { createMorningstarRouter } = require('./src/routes/morningstar.routes');
 const { createPortfolioRouter } = require('./src/routes/portfolio.routes');
@@ -10,15 +9,13 @@ const { PortfolioRepository } = require('./src/db/portfolio.repository');
 const { PortfolioImportService } = require('./src/services/portfolio-import.service');
 const { PortfolioQueryService } = require('./src/services/portfolio-query.service');
 
-async function bootstrap() {
+async function createApp() {
   const app = express();
-  const port = Number(process.env.API_PORT || 3000);
-  const sessionManager = new SessionManager({
-    sessionTtlMs: env.auth.sessionTtlMs
-  });
-  const portfolioImportService = new PortfolioImportService();
-  const portfolioQueryService = new PortfolioQueryService(portfolioImportService.repository);
-  const devaRepository = new PortfolioRepository('deva-portfolio.db');
+
+  const portfolioRepository = new PortfolioRepository('main');
+  const portfolioImportService = new PortfolioImportService(portfolioRepository);
+  const portfolioQueryService = new PortfolioQueryService(portfolioRepository);
+  const devaRepository = new PortfolioRepository('deva');
   const devaPortfolioQueryService = new PortfolioQueryService(devaRepository);
 
   await portfolioImportService.initialize();
@@ -26,12 +23,12 @@ async function bootstrap() {
   await devaPortfolioQueryService.initialize();
 
   app.use(express.json());
-  app.use(attachSession(sessionManager));
+  app.use(attachSession());
 
   app.get('/api/health', (_req, res) => {
-    res.json({ ok: true, service: 'morningstar-backend' });
+    res.json({ ok: true, service: 'mi-cartera-backend' });
   });
-  app.use('/api/auth', createAuthRouter(sessionManager));
+  app.use('/api/auth', createAuthRouter());
   app.use('/api', requireAuth());
 
   app.use(
@@ -59,12 +56,22 @@ async function bootstrap() {
     });
   });
 
-  app.listen(port, () => {
-    console.log(`Morningstar backend listening on http://localhost:${port}`);
-  });
+  return app;
 }
 
-bootstrap().catch((error) => {
-  console.error('Failed to bootstrap backend', error);
-  process.exit(1);
-});
+if (require.main === module) {
+  const port = Number(process.env.API_PORT || 3000);
+
+  createApp()
+    .then((app) => {
+      app.listen(port, () => {
+        console.log(`Backend listening on http://localhost:${port}`);
+      });
+    })
+    .catch((error) => {
+      console.error('Failed to start backend', error);
+      process.exit(1);
+    });
+}
+
+module.exports = { createApp };

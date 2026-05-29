@@ -5,10 +5,13 @@ import { firstValueFrom } from 'rxjs';
 type AuthResponse = {
   authenticated: boolean;
   username?: string;
+  token?: string;
 };
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
+  private static readonly TOKEN_KEY = 'portfolio_token';
+
   private readonly http = inject(HttpClient);
   private readonly authState = signal<{ checked: boolean; authenticated: boolean; username: string | null }>({
     checked: false,
@@ -21,11 +24,20 @@ export class AuthService {
   readonly isAuthenticated = computed(() => this.authState().authenticated);
   readonly username = computed(() => this.authState().username);
 
+  getToken(): string | null {
+    return localStorage.getItem(AuthService.TOKEN_KEY);
+  }
+
   async ensureSession(): Promise<boolean> {
     const currentState = this.authState();
 
     if (currentState.checked) {
       return currentState.authenticated;
+    }
+
+    if (!this.getToken()) {
+      this.clearState();
+      return false;
     }
 
     if (!this.restorePromise) {
@@ -48,11 +60,12 @@ export class AuthService {
 
   async login(username: string, password: string): Promise<void> {
     const response = await firstValueFrom(
-      this.http.post<AuthResponse>('/api/auth/login', {
-        username,
-        password
-      })
+      this.http.post<AuthResponse>('/api/auth/login', { username, password })
     );
+
+    if (response.token) {
+      localStorage.setItem(AuthService.TOKEN_KEY, response.token);
+    }
 
     this.setAuthenticatedState(response.username ?? username.trim() ?? null);
   }
@@ -78,6 +91,7 @@ export class AuthService {
   }
 
   private clearState(): void {
+    localStorage.removeItem(AuthService.TOKEN_KEY);
     this.authState.set({
       checked: true,
       authenticated: false,

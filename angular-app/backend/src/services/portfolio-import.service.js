@@ -1,36 +1,17 @@
-const fs = require('fs');
-const path = require('path');
 const XLSX = require('xlsx');
 const { PortfolioRepository } = require('../db/portfolio.repository');
 
 class PortfolioImportService {
-  constructor(repository = new PortfolioRepository()) {
+  constructor(repository = new PortfolioRepository('main')) {
     this.repository = repository;
-    this.workbookPath = path.resolve(process.cwd(), 'información financiera.xlsx');
   }
 
   async initialize() {
     await this.repository.initialize();
-    await this.syncFromExcelIfNeeded();
   }
 
-  async syncFromExcelIfNeeded(force = false) {
-    if (!this.hasWorkbook()) {
-      return {
-        imported: false,
-        sourceMissing: true
-      };
-    }
-
-    const stat = fs.statSync(this.workbookPath);
-    const sourceMtime = String(stat.mtimeMs);
-    const storedMtime = await this.repository.getMetadata('source_mtime_ms');
-
-    if (!force && storedMtime === sourceMtime) {
-      return { imported: false };
-    }
-
-    const dataset = this.readWorkbook();
+  async syncFromWorkbookBuffer(buffer) {
+    const dataset = this.readWorkbookBuffer(buffer);
 
     await this.repository.clearPortfolio();
 
@@ -47,76 +28,36 @@ class PortfolioImportService {
       }
     }
 
-    await this.repository.setMetadata('source_mtime_ms', sourceMtime);
     await this.repository.setMetadata('last_imported_at', new Date().toISOString());
 
     return { imported: true, positions: dataset.rows.length };
   }
 
-  async previewWorkbookImport() {
-    const workbookName = path.basename(this.workbookPath);
+  async previewFromDatabase() {
+    const positions = await this.repository.getPositions();
+    const lastImportedAt = await this.repository.getMetadata('last_imported_at');
 
-    if (!this.hasWorkbook()) {
-      return {
-        workbookAvailable: false,
-        workbookName,
-        sheetName: null,
-        detectedRows: 0,
-        sectionCounts: {
-          funds: 0,
-          equities: 0
-        },
-        lastWorkbookUpdate: null,
-        warnings: ['No se ha encontrado el fichero base de importacion en el servidor local.'],
-        canImport: false
-      };
-    }
-
-    const stat = fs.statSync(this.workbookPath);
-    const dataset = this.readWorkbook();
-    const warnings = [];
-    const fundsCount = dataset.sections.find((section) => section.title === 'FONDOS')?.rows.length ?? 0;
-    const equitiesCount = dataset.sections.find((section) => section.title === 'ACCIONES')?.rows.length ?? 0;
-    const duplicatedIsins = findDuplicatedIsins(dataset.rows);
-
-    if (!fundsCount) {
-      warnings.push('La hoja no contiene fondos detectables.');
-    }
-
-    if (!equitiesCount) {
-      warnings.push('La hoja no contiene acciones detectables.');
-    }
-
-    if (!dataset.rows.length) {
-      warnings.push('La hoja existe, pero no se han detectado posiciones importables.');
-    }
-
-    if (duplicatedIsins.length) {
-      warnings.push(`Hay ISIN repetidos en el Excel: ${duplicatedIsins.slice(0, 4).join(', ')}${duplicatedIsins.length > 4 ? '...' : ''}`);
-    }
+    const fundsCount = positions.filter((p) => p.section === 'FONDOS').length;
+    const equitiesCount = positions.filter((p) => p.section === 'ACCIONES').length;
 
     return {
-      workbookAvailable: true,
-      workbookName,
-      sheetName: 'Cartera',
-      detectedRows: dataset.rows.length,
+      positionCount: positions.length,
+      lastImportedAt,
       sectionCounts: {
         funds: fundsCount,
         equities: equitiesCount
-      },
-      lastWorkbookUpdate: stat.mtime.toISOString(),
-      warnings,
-      canImport: dataset.rows.length > 0
+      }
     };
   }
 
-  hasWorkbook() {
-    return fs.existsSync(this.workbookPath);
-  }
-
-  readWorkbook() {
-    const workbook = XLSX.readFile(this.workbookPath, { cellDates: true });
+  readWorkbookBuffer(buffer) {
+    const workbook = XLSX.read(buffer, { type: 'buffer', cellDates: true });
     const sheet = workbook.Sheets['Cartera'];
+
+    if (!sheet) {
+      throw new Error('No se encontro la hoja "Cartera" en el fichero Excel');
+    }
+
     const rows = XLSX.utils.sheet_to_json(sheet, { header: 1, raw: false, defval: '' });
 
     const sections = [];
@@ -131,18 +72,12 @@ class PortfolioImportService {
       }
 
       if (label === 'FONDOS' || label === 'ACCIONES') {
-        currentSection = {
-          title: label,
-          rows: [],
-          totals: null
-        };
+        currentSection = { title: label, rows: [], totals: null };
         sections.push(currentSection);
         continue;
       }
 
-      if (!currentSection) {
-        continue;
-      }
+      if (!currentSection) continue;
 
       if (label === 'TOTALES') {
         currentSection.totals = createTotals(cells);
@@ -153,9 +88,9 @@ class PortfolioImportService {
     }
 
     return {
-      lastUpdated: getLastUpdated(sections.flatMap((section) => section.rows)),
+      lastUpdated: getLastUpdated(sections.flatMap((s) => s.rows)),
       sections,
-      rows: sections.flatMap((section) => section.rows)
+      rows: sections.flatMap((s) => s.rows)
     };
   }
 }
@@ -226,15 +161,11 @@ function parseQuantityNumber(value) {
 }
 
 function parseFlexibleNumber(value) {
-  if (!value) {
-    return 0;
-  }
+  if (!value) return 0;
 
   const sanitized = String(value).replace(/[^0-9,.-]/g, '').trim();
 
-  if (!sanitized) {
-    return 0;
-  }
+  if (!sanitized) return 0;
 
   const commaCount = (sanitized.match(/,/g) || []).length;
   const dotCount = (sanitized.match(/\./g) || []).length;
@@ -261,7 +192,7 @@ function slugify(value) {
   return value
     .toLowerCase()
     .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[̀-ͯ]/g, '')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
 }
@@ -288,29 +219,9 @@ function normalizePositionType(section, type) {
     return 'Acción';
   }
 
-  if (normalizedType) {
-    return normalizedType;
-  }
+  if (normalizedType) return normalizedType;
 
   return section === 'ACCIONES' ? 'Acción' : '';
-}
-
-function findDuplicatedIsins(rows) {
-  const counts = new Map();
-
-  for (const row of rows) {
-    const isin = String(row.isin ?? '').trim().toUpperCase();
-
-    if (!isin) {
-      continue;
-    }
-
-    counts.set(isin, (counts.get(isin) ?? 0) + 1);
-  }
-
-  return Array.from(counts.entries())
-    .filter(([, count]) => count > 1)
-    .map(([isin]) => isin);
 }
 
 module.exports = { PortfolioImportService };

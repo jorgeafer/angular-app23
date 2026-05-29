@@ -21,8 +21,7 @@ const env = {
     username: process.env.AUTH_USERNAME || 'admin',
     password: process.env.AUTH_PASSWORD || 'admin1234',
     sessionTtlMs: Number(process.env.AUTH_SESSION_TTL_MS || 1000 * 60 * 60 * 12),
-    cookieName: process.env.AUTH_COOKIE_NAME || 'portfolio_session',
-    secureCookies: process.env.AUTH_SECURE_COOKIES === 'true'
+    jwtSecret: process.env.JWT_SECRET || 'dev-secret-change-in-production'
   }
 };
 

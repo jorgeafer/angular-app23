@@ -532,15 +532,21 @@ h1 {
   padding-top: 2px;
 }
 
-.import-warning-list,
 .import-actions {
   margin-top: 16px;
-}
-
-.import-actions {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
+}
+
+.import-file-label {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .comparator-selectors {
