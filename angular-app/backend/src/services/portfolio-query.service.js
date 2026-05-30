@@ -661,6 +661,13 @@ function applyEditableValue(row, field, nextValue) {
     };
   }
 
+  if (field === 'yahooSymbol') {
+    return {
+      ...row,
+      yahooSymbol: nextValue
+    };
+  }
+
   const nextRow = {
     ...row,
     sharesValue: field === 'shares' ? nextValue : row.sharesValue,
@@ -1439,9 +1446,8 @@ function normalizeInvestmentClass(value) {
 }
 
 function normalizeEditableField(value) {
-  return value === 'shares' || value === 'totalInvested' || value === 'investmentClass' || value === 'type' || value === 'currency'
-    ? value
-    : null;
+  const editableFields = ['shares', 'totalInvested', 'investmentClass', 'type', 'currency', 'yahooSymbol'];
+  return editableFields.includes(value) ? value : null;
 }
 
 function normalizeEditableValueInput(field, value) {
@@ -1473,6 +1479,11 @@ function normalizeEditableValueInput(field, value) {
     }
 
     return normalizedCurrency;
+  }
+
+  if (field === 'yahooSymbol') {
+    const normalizedSymbol = String(value ?? '').trim();
+    return normalizedSymbol || null;
   }
 
   const parsedValue = parseEditableInput(value);

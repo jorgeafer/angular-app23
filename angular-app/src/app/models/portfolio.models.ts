@@ -3,7 +3,7 @@ export interface PortfolioNavPoint {
   close: number;
 }
 
-export type EditablePortfolioField = 'shares' | 'totalInvested' | 'investmentClass' | 'type' | 'currency';
+export type EditablePortfolioField = 'shares' | 'totalInvested' | 'investmentClass' | 'type' | 'currency' | 'yahooSymbol';
 
 export interface CreateFundPayload {
   name: string;
@@ -59,6 +59,7 @@ export interface PortfolioRow {
   ticker?: string;
   symbol?: string;
   performanceId?: string;
+  yahooSymbol?: string;
   shares: string;
   currency: string;
   type: string;
