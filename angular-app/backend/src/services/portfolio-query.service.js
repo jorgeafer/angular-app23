@@ -481,7 +481,7 @@ function mapOperationRow(row) {
 
 function resolveYahooLookup(row) {
   if (row.isin) {
-    return { idType: 'isin', id: row.isin };
+    return { idType: 'isin', id: row.isin, name: row.name };
   }
 
   if (row.symbol) {

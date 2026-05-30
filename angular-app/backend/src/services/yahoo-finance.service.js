@@ -4,7 +4,13 @@ const { HttpError } = require('../errors/http-error');
 function createDefaultProvider() {
   if (env.finnhubApiKey) {
     const { FinnhubProvider } = require('../providers/finnhub.provider');
-    return new FinnhubProvider(env.finnhubApiKey);
+    const { YahooFinanceHttpProvider } = require('../providers/yahoo-finance-http.provider');
+    const { CompositeMarketDataProvider } = require('../providers/composite-market-data.provider');
+
+    return new CompositeMarketDataProvider({
+      fundProvider: new YahooFinanceHttpProvider(),       // Yahoo Finance HTTP para fondos
+      equityProvider: new FinnhubProvider(env.finnhubApiKey) // Finnhub para acciones
+    });
   }
 
   if (env.twelveDataApiKey) {
