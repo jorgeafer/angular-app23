@@ -8,9 +8,15 @@
   ],
   "functions": {
     "api/index.js": {
-      "maxDuration": 30
+      "maxDuration": 60
     }
   },
+  "crons": [
+    {
+      "path": "/api/cron/refresh",
+      "schedule": "0 7 * * *"
+    }
+  ],
   "env": {
     "NODE_ENV": "production"
   },

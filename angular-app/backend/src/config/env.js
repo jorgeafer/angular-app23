@@ -16,6 +16,7 @@ const env = {
     .split(',')
     .map((value) => value.trim())
     .filter(Boolean),
+  cronSecret: process.env.CRON_SECRET || '',
   finnhubApiKey: process.env.FINNHUB_API_KEY || '',
   twelveDataApiKey: process.env.TWELVE_DATA_API_KEY || '',
   yahooAllowInsecureTls: process.env.YAHOO_ALLOW_INSECURE_TLS === 'true',

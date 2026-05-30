@@ -29,10 +29,59 @@ async function createApp() {
     res.json({ ok: true, service: 'mi-cartera-backend' });
   });
   app.use('/api/auth', createAuthRouter());
-  app.use('/api', requireAuth());
 
+  // Endpoint de actualización de precios — accesible desde el botón del frontend
+  app.post('/api/portfolio/refresh', requireAuth(), async (req, res, next) => {
+    try {
+      const result = await portfolioQueryService.refreshPortfolioPrices();
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  app.post('/api/deva-portfolio/refresh', requireAuth(), async (req, res, next) => {
+    try {
+      const result = await devaPortfolioQueryService.refreshPortfolioPrices();
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  });
+
+  // Cron job: actualiza precios — protegido con CRON_SECRET (sin JWT)
+  app.get('/api/cron/refresh', async (req, res) => {
+    const secret = env.cronSecret;
+    const authHeader = req.headers.authorization ?? '';
+
+    if (!secret || authHeader !== `Bearer ${secret}`) {
+      res.status(401).json({ error: 'Cron secret invalido' });
+      return;
+    }
+
+    const started = Date.now();
+
+    try {
+      const [mainResult, devaResult] = await Promise.allSettled([
+        portfolioQueryService.refreshPortfolioPrices(),
+        devaPortfolioQueryService.refreshPortfolioPrices()
+      ]);
+
+      res.json({
+        executedAt: new Date().toISOString(),
+        durationMs: Date.now() - started,
+        main: mainResult.status === 'fulfilled' ? mainResult.value : { error: mainResult.reason?.message },
+        deva: devaResult.status === 'fulfilled' ? devaResult.value : { error: devaResult.reason?.message }
+      });
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  });
+
+  // Rutas protegidas con JWT — requireAuth() aplicado a cada router
   app.use(
     '/api/portfolio',
+    requireAuth(),
     createPortfolioRouter({
       importService: portfolioImportService,
       queryService: portfolioQueryService
@@ -40,14 +89,15 @@ async function createApp() {
   );
   app.use(
     '/api/deva-portfolio',
+    requireAuth(),
     createPortfolioRouter({
       importService: null,
       queryService: devaPortfolioQueryService,
       enableImport: false
     })
   );
-  app.use('/api/morningstar', createMorningstarRouter());
-  app.use('/api/yahoo', createYahooRouter());
+  app.use('/api/morningstar', requireAuth(), createMorningstarRouter());
+  app.use('/api/yahoo', requireAuth(), createYahooRouter());
 
   app.use((err, _req, res, _next) => {
     const status = err.statusCode || 500;
