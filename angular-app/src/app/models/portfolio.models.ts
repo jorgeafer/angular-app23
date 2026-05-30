@@ -180,6 +180,13 @@ export interface PortfolioImportPreview {
   };
 }
 
+export interface PortfolioRefreshResult {
+  updatedCount: number;
+  failedCount: number;
+  total: number;
+  lastUpdatedAt: string;
+}
+
 export interface PortfolioImportResult {
   imported: boolean;
   positions?: number;

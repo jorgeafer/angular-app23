@@ -315,7 +315,8 @@ class PortfolioQueryService {
     const snapshot = await this.yahooFinanceService.getFundSnapshot({
       assetType: 'fund',
       idType: lookup.idType,
-      id: lookup.id
+      id: lookup.id,
+      name: lookup.name
     });
 
     this.yahooSnapshotCache.set(cacheKey, {
@@ -337,7 +338,8 @@ class PortfolioQueryService {
     const snapshot = await this.yahooFinanceService.getAssetDetails({
       assetType: 'equity',
       idType: lookup.idType,
-      id: lookup.id
+      id: lookup.id,
+      name: lookup.name
     });
 
     this.yahooSnapshotCache.set(cacheKey, {
@@ -346,6 +348,47 @@ class PortfolioQueryService {
     });
 
     return snapshot;
+  }
+
+  async refreshPortfolioPrices() {
+    const dbPositions = await this.repository.getPositions();
+    const rows = dbPositions.map(mapPositionRow);
+
+    const results = await Promise.allSettled(
+      rows.map(async (row) => {
+        const lookup = resolveYahooLookup(row);
+        if (!lookup) return false;
+
+        try {
+          let snapshot;
+
+          if (row.section === 'FONDOS') {
+            snapshot = await withTimeout(this.getFundSnapshot(lookup), 12000);
+            if (!snapshot) return false;
+            const enriched = applyFundSnapshot(row, snapshot, null);
+            await this.repository.updatePosition(enriched);
+          } else {
+            snapshot = await withTimeout(this.getEquitySnapshot(lookup), 12000);
+            if (!snapshot) return false;
+            const enriched = applyEquitySnapshot(row, snapshot);
+            await this.repository.updatePosition(enriched);
+          }
+
+          return true;
+        } catch {
+          return false;
+        }
+      })
+    );
+
+    const updatedCount = results.filter((r) => r.status === 'fulfilled' && r.value === true).length;
+    const failedCount = results.length - updatedCount;
+    const lastUpdatedAt = new Date().toISOString();
+
+    await this.repository.setMetadata('last_price_update_at', lastUpdatedAt);
+    this.yahooSnapshotCache.clear();
+
+    return { updatedCount, failedCount, total: rows.length, lastUpdatedAt };
   }
 
   async buildBenchmarkOverview(rows) {

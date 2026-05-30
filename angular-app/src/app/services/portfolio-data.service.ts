@@ -5,6 +5,7 @@ import {
   CreateFundPayload,
   CreateEquityPayload,
   EditablePortfolioField,
+  PortfolioRefreshResult,
   PortfolioDataset,
   PortfolioImportPreview,
   PortfolioImportResult,
@@ -88,6 +89,14 @@ export class PortfolioDataService {
 
     this.datasetPromises.clear();
     return created;
+  }
+
+  async refreshPrices(portfolioKey = 'main'): Promise<PortfolioRefreshResult> {
+    const result = await firstValueFrom(
+      this.http.post<PortfolioRefreshResult>(`${this.getBaseUrl(portfolioKey)}/refresh`, {})
+    );
+    this.datasetPromises.clear();
+    return result;
   }
 
   async createEquity(payload: CreateEquityPayload, portfolioKey = 'main'): Promise<PortfolioRow> {

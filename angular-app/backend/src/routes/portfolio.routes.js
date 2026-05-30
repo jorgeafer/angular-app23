@@ -107,6 +107,15 @@ function createPortfolioRouter({
     }
   });
 
+  router.post('/refresh', async (_req, res, next) => {
+    try {
+      const result = await queryService.refreshPortfolioPrices();
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  });
+
   if (enableImport && importService) {
     router.get('/import/preview', async (_req, res, next) => {
       try {

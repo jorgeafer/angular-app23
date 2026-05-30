@@ -10,6 +10,7 @@ import {
   CreateFundPayload,
   CreateEquityPayload,
   EditablePortfolioField,
+  PortfolioRefreshResult,
   PortfolioImportPreview,
   PortfolioNavPoint,
   PortfolioDataset,
@@ -148,6 +149,9 @@ export class PortfolioHomeComponent implements OnInit {
   protected createFundErrorMessage = '';
   protected deleteFundErrorMessage = '';
   protected fundPendingDeletion: PortfolioRow | null = null;
+  protected isRefreshingPrices = false;
+  protected refreshPricesMessage = '';
+  protected refreshPricesError = '';
   protected isEquityEditMode = false;
   protected isAddEquityModalOpen = false;
   protected isCreatingEquity = false;
@@ -819,6 +823,24 @@ export class PortfolioHomeComponent implements OnInit {
       this.createFundErrorMessage = error instanceof Error ? error.message : 'No se pudo añadir el fondo.';
     } finally {
       this.isCreatingFund = false;
+    }
+  }
+
+  protected async refreshPrices(): Promise<void> {
+    if (this.isRefreshingPrices) return;
+
+    this.isRefreshingPrices = true;
+    this.refreshPricesMessage = '';
+    this.refreshPricesError = '';
+
+    try {
+      const result = await this.portfolioDataService.refreshPrices(this.portfolioKey);
+      this.refreshPricesMessage = `Actualizado: ${result.updatedCount} posiciones. ${result.failedCount > 0 ? result.failedCount + ' sin datos de mercado.' : ''}`;
+      await this.loadPortfolio(true);
+    } catch (error) {
+      this.refreshPricesError = error instanceof Error ? error.message : 'No se pudo actualizar los precios.';
+    } finally {
+      this.isRefreshingPrices = false;
     }
   }
 
