@@ -93,6 +93,11 @@ class YahooFinanceHttpProvider {
   // ── Private helpers ────────────────────────────────────────────────────────
 
   async resolveSymbol(request) {
+    // Símbolo de Yahoo Finance explícitamente proporcionado (ej: 0P0001J9GX.F)
+    if (request.yahooSymbol) {
+      return request.yahooSymbol;
+    }
+
     // Ticker/símbolo: usarlo directamente
     if (request.idType === 'ticker' || request.idType === 'symbol') {
       return request.id;
@@ -103,7 +108,19 @@ class YahooFinanceHttpProvider {
       return symbolCache.get(request.id);
     }
 
-    // Para fondos: buscar por nombre en Yahoo Finance (el ISIN no funciona como búsqueda)
+    // Para ISIN: intentar primero OpenFIGI (Bloomberg)
+    if (request.idType === 'isin') {
+      const figi = await this.resolveISINviaOpenFIGI(request.id).catch(() => null);
+      if (figi?.symbol) {
+        // OpenFIGI encontró un símbolo, pero almacenar también la información de origen
+        // para poder validar si Yahoo Finance devuelve datos creíbles
+        symbolCache.set(request.id, figi.symbol);
+        this.lastResolvedExchange = figi.exchange; // Guardar para validación posterior
+        return figi.symbol;
+      }
+    }
+
+    // Fallback: buscar por nombre en Yahoo Finance
     if (request.name) {
       const symbol = await this.searchByName(request.name, 'MUTUALFUND');
       if (symbol) {
@@ -112,14 +129,33 @@ class YahooFinanceHttpProvider {
       }
     }
 
-    // Último intento: buscar por ISIN como texto libre
-    const symbol = await this.searchByName(request.id, null);
-    if (symbol) {
-      symbolCache.set(request.id, symbol);
-      return symbol;
-    }
-
     throw new HttpError(404, `Yahoo Finance: no se encontro símbolo para ${request.name ?? request.id}`);
+  }
+
+  async resolveISINviaOpenFIGI(isin) {
+    const response = await fetch('https://api.openfigi.com/v3/mapping', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify([{ idType: 'ID_ISIN', idValue: isin }]),
+      signal: AbortSignal.timeout(8000)
+    });
+
+    if (!response.ok) return null;
+
+    const [result] = await response.json();
+    if (!result?.data || result.data.length === 0) return null;
+
+    // Preferir símbolos de mercados principales; evitar opciones/derivados
+    const preferredData = result.data.find(
+      (d) => (d.exchCode === 'US' || d.exchCode?.startsWith('EU')) && !d.ticker?.includes('=')
+    );
+    const data = preferredData ?? result.data[0];
+
+    return {
+      symbol: data?.ticker,
+      exchange: data?.exchCode,
+      name: data?.name
+    };
   }
 
   async searchByName(query, preferredType) {

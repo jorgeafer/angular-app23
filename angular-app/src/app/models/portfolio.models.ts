@@ -12,6 +12,7 @@ export interface CreateFundPayload {
   currency: string;
   totalInvested: string;
   shares: string;
+  yahooSymbol?: string; // Símbolo de Yahoo Finance (ej: 0P0001J9GX.F)
 }
 
 export interface CreateEquityPayload {

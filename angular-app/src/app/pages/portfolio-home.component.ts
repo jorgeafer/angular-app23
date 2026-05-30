@@ -1742,7 +1742,8 @@ export class PortfolioHomeComponent implements OnInit {
       type: '',
       currency: 'EUR',
       totalInvested: '',
-      shares: ''
+      shares: '',
+      yahooSymbol: ''
     };
   }
 

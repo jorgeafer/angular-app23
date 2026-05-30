@@ -949,6 +949,17 @@
         </label>
 
         <label class="field">
+          <span>Símbolo Yahoo Finance <span class="optional">(ej: 0P0001J9GX.F)</span></span>
+          <input
+            type="text"
+            [ngModel]="newFundForm.yahooSymbol"
+            (ngModelChange)="updateNewFundField('yahooSymbol', $event)"
+            [disabled]="isCreatingFund"
+            placeholder="Opcional - acelera búsqueda de datos"
+          />
+        </label>
+
+        <label class="field">
           <span>Tipo</span>
           <input
             type="text"

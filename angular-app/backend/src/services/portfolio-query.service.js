@@ -524,7 +524,7 @@ function mapOperationRow(row) {
 
 function resolveYahooLookup(row) {
   if (row.isin) {
-    return { idType: 'isin', id: row.isin, name: row.name };
+    return { idType: 'isin', id: row.isin, name: row.name, yahooSymbol: row.yahoo_symbol };
   }
 
   if (row.symbol) {
@@ -1501,6 +1501,7 @@ function normalizeCreateFundPayload(payload) {
       .toUpperCase(),
     type: String(payload?.type ?? '').trim(),
     currency: String(payload?.currency ?? '').trim().toUpperCase(),
+    yahooSymbol: String(payload?.yahooSymbol ?? '').trim() || null,
     totalInvestedValue,
     sharesValue
   };
@@ -1594,6 +1595,7 @@ function createFundRow(input) {
     ticker: undefined,
     symbol: undefined,
     performanceId: undefined,
+    yahooSymbol: input.yahooSymbol,
     shares: formatEditableShares(input.sharesValue, String(input.sharesValue)),
     currency: input.currency,
     type: input.type,

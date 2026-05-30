@@ -2,24 +2,68 @@ const { env } = require('../config/env');
 const { HttpError } = require('../errors/http-error');
 
 function createDefaultProvider() {
-  if (env.finnhubApiKey) {
-    const { FinnhubProvider } = require('../providers/finnhub.provider');
-    const { YahooFinanceHttpProvider } = require('../providers/yahoo-finance-http.provider');
-    const { CompositeMarketDataProvider } = require('../providers/composite-market-data.provider');
+  const { YahooFinanceHttpProvider } = require('../providers/yahoo-finance-http.provider');
+  const yf = new YahooFinanceHttpProvider();
 
-    return new CompositeMarketDataProvider({
-      fundProvider: new YahooFinanceHttpProvider(),       // Yahoo Finance HTTP para fondos
-      equityProvider: new FinnhubProvider(env.finnhubApiKey) // Finnhub para acciones
-    });
-  }
+  // Proveedor compuesto: Morningstar para fondos, Yahoo Finance HTTP para acciones
+  const provider = {
+    async getAssetDetails(request) {
+      if (request.assetType === 'fund') {
+        return this.getFundSnapshot(request);
+      }
+      // Acciones: Yahoo Finance
+      try {
+        return await yf.getAssetDetails(request);
+      } catch (error) {
+        // Fallback a Finnhub si está disponible
+        if (env.finnhubApiKey) {
+          const { FinnhubProvider } = require('../providers/finnhub.provider');
+          return new FinnhubProvider(env.finnhubApiKey).getAssetDetails(request);
+        }
+        throw error;
+      }
+    },
 
-  if (env.twelveDataApiKey) {
-    const { TwelveDataProvider } = require('../providers/twelve-data.provider');
-    return new TwelveDataProvider(env.twelveDataApiKey);
-  }
+    async getFundSnapshot(request) {
+      // Intentar Yahoo Finance primero (para fondos que SÍ están allí)
+      try {
+        return await yf.getFundSnapshot(request);
+      } catch (yahooError) {
+        // Si Yahoo falla, intentar Morningstar búsqueda (API pública, sin credenciales)
+        try {
+          const { MorningstarSearchProvider } = require('../providers/morningstar-search.provider');
+          const ms = new MorningstarSearchProvider();
+          return await ms.getFundSnapshot(request);
+        } catch (msError) {
+          // Si Morningstar también falla, intentar Finnhub
+          if (env.finnhubApiKey) {
+            try {
+              const { FinnhubProvider } = require('../providers/finnhub.provider');
+              return new FinnhubProvider(env.finnhubApiKey).getFundSnapshot(request);
+            } catch {
+              throw yahooError; // Lanzar error original de Yahoo
+            }
+          }
+          throw yahooError;
+        }
+      }
+    },
 
-  const { YahooFinanceProvider } = require('../providers/yahoo-finance.provider');
-  return new YahooFinanceProvider();
+    async getMarketSeries(symbol) {
+      try {
+        return await yf.getMarketSeries(symbol);
+      } catch (error) {
+        // Fallback a Finnhub para benchmarks
+        if (env.finnhubApiKey) {
+          const { FinnhubProvider } = require('../providers/finnhub.provider');
+          return new FinnhubProvider(env.finnhubApiKey).getMarketSeries(symbol);
+        }
+        throw error;
+      }
+    }
+  };
+
+  return provider;
 }
 
 class YahooFinanceService {

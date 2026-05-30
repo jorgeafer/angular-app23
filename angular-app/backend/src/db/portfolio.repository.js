@@ -17,6 +17,7 @@ class PortfolioRepository {
         ticker TEXT,
         symbol TEXT,
         performance_id TEXT,
+        yahoo_symbol TEXT,
         shares TEXT,
         currency TEXT,
         type TEXT,
@@ -109,12 +110,12 @@ class PortfolioRepository {
   async upsertPosition(position) {
     await query(
       `INSERT INTO positions (
-        portfolio_key, id, section, asset_kind, name, isin, ticker, symbol, performance_id,
+        portfolio_key, id, section, asset_kind, name, isin, ticker, symbol, performance_id, yahoo_symbol,
         shares, currency, type, investment_class, total_invested, invested_weight, market_date,
         unit_value, total_valuation, profit_euros, valuation_weight, total_return,
         total_invested_value, total_valuation_value, profit_euros_value, total_return_value,
         shares_value, unit_value_number
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25, $26, $27, $28)
       ON CONFLICT (portfolio_key, id) DO UPDATE SET
         section = EXCLUDED.section,
         asset_kind = EXCLUDED.asset_kind,
@@ -123,6 +124,7 @@ class PortfolioRepository {
         ticker = EXCLUDED.ticker,
         symbol = EXCLUDED.symbol,
         performance_id = EXCLUDED.performance_id,
+        yahoo_symbol = EXCLUDED.yahoo_symbol,
         shares = EXCLUDED.shares,
         currency = EXCLUDED.currency,
         type = EXCLUDED.type,
@@ -151,6 +153,7 @@ class PortfolioRepository {
         position.ticker ?? null,
         position.symbol ?? null,
         position.performanceId ?? null,
+        position.yahooSymbol ?? null,
         position.shares,
         position.currency,
         position.type,
