@@ -101,8 +101,16 @@ class TwelveDataProvider {
       signal: AbortSignal.timeout(10000)
     });
 
+    if (response.status === 401 || response.status === 403) {
+      throw new HttpError(502, `Twelve Data: API key invalida o sin permisos (${response.status})`);
+    }
+
+    if (response.status === 429) {
+      throw new HttpError(503, 'Twelve Data: limite de peticiones alcanzado.');
+    }
+
     if (!response.ok) {
-      throw new Error(`Twelve Data HTTP ${response.status} for ${path}`);
+      throw new HttpError(502, `Twelve Data error ${response.status} para ${path}`);
     }
 
     return response.json();

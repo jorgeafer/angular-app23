@@ -125,15 +125,19 @@ class FinnhubProvider {
     });
 
     if (response.status === 401) {
-      throw new HttpError(401, 'Finnhub: API key invalida. Comprueba FINNHUB_API_KEY en las variables de entorno y reinicia el servidor.');
+      throw new HttpError(502, 'Finnhub: API key invalida. Comprueba FINNHUB_API_KEY en las variables de entorno.');
     }
 
     if (response.status === 403) {
-      throw new HttpError(403, 'Finnhub: endpoint requiere plan premium');
+      throw new HttpError(502, 'Finnhub: endpoint requiere plan premium');
+    }
+
+    if (response.status === 429) {
+      throw new HttpError(503, 'Finnhub: limite de peticiones alcanzado. Intenta de nuevo en un momento.');
     }
 
     if (!response.ok) {
-      throw new Error(`Finnhub HTTP ${response.status} para ${path}`);
+      throw new HttpError(502, `Finnhub error ${response.status} para ${path}`);
     }
 
     return response.json();
