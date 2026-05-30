@@ -3,6 +3,7 @@ import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
 import {
   YahooAssetType,
   YahooDetailsViewModel,
@@ -498,7 +499,7 @@ export class AssetDetailComponent implements OnInit {
     const lookup = this.resolveLookup(asset);
 
     if (!lookup) {
-      this.yahooEmptyMessage = 'No hay un identificador compatible disponible para consultar Yahoo Finance en este activo.';
+      this.yahooEmptyMessage = 'No hay un identificador disponible para consultar datos de mercado en este activo.';
       return;
     }
 
@@ -510,11 +511,17 @@ export class AssetDetailComponent implements OnInit {
       this.yahooDetails = await firstValueFrom(this.yahooFinanceAssetService.getAssetDetails(lookup));
 
       if (!this.yahooDetails) {
-        this.yahooEmptyMessage = 'Yahoo Finance no devolvio informacion para este activo.';
+        this.yahooEmptyMessage = 'No se encontro informacion de mercado para este activo.';
       }
     } catch (error) {
-      this.yahooError =
-        error instanceof Error ? error.message : 'No se pudo recuperar la informacion enriquecida de Yahoo Finance.';
+      if (error instanceof HttpErrorResponse && (error.status === 404 || error.status === 0)) {
+        this.yahooEmptyMessage = 'Este activo no esta disponible en el proveedor de datos de mercado configurado.';
+      } else {
+        const msg = (error instanceof HttpErrorResponse ? error.error?.error : null)
+          ?? (error instanceof Error ? error.message : null)
+          ?? 'No se pudo recuperar la informacion de mercado.';
+        this.yahooError = msg;
+      }
     } finally {
       this.yahooLoading = false;
     }

@@ -214,7 +214,7 @@
     <section class="detail-card yahoo-card">
       <div class="section-head">
         <div>
-          <p class="eyebrow">Yahoo Finance</p>
+          <p class="eyebrow">Datos de mercado</p>
           <h2>Informacion enriquecida</h2>
         </div>
         @if (yahooDetails?.assetType) {
@@ -224,12 +224,12 @@
 
       @if (yahooLoading) {
         <div class="state-box app-message app-message--info">
-          <strong>Cargando Yahoo Finance</strong>
+          <strong>Cargando datos de mercado</strong>
           <p>Recuperando informacion financiera adicional del activo.</p>
         </div>
       } @else if (yahooError) {
         <div class="state-box state-box--error app-message app-message--error">
-          <strong>No se pudo cargar Yahoo Finance</strong>
+          <strong>No se pudieron cargar los datos de mercado</strong>
           <p>{{ yahooError }}</p>
         </div>
       } @else if (yahooEmptyMessage) {

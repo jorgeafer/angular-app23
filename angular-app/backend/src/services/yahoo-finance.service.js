@@ -1,9 +1,14 @@
 const { env } = require('../config/env');
 const { HttpError } = require('../errors/http-error');
+const { FinnhubProvider } = require('../providers/finnhub.provider');
 const { TwelveDataProvider } = require('../providers/twelve-data.provider');
 const { YahooFinanceProvider } = require('../providers/yahoo-finance.provider');
 
 function createDefaultProvider() {
+  if (env.finnhubApiKey) {
+    return new FinnhubProvider(env.finnhubApiKey);
+  }
+
   if (env.twelveDataApiKey) {
     return new TwelveDataProvider(env.twelveDataApiKey);
   }
