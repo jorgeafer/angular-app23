@@ -124,6 +124,10 @@ class FinnhubProvider {
       signal: AbortSignal.timeout(10000)
     });
 
+    if (response.status === 401) {
+      throw new HttpError(401, 'Finnhub: API key invalida. Comprueba FINNHUB_API_KEY en las variables de entorno y reinicia el servidor.');
+    }
+
     if (response.status === 403) {
       throw new HttpError(403, 'Finnhub: endpoint requiere plan premium');
     }
