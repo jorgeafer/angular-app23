@@ -316,7 +316,8 @@ class PortfolioQueryService {
       assetType: 'fund',
       idType: lookup.idType,
       id: lookup.id,
-      name: lookup.name
+      name: lookup.name,
+      yahooSymbol: lookup.yahooSymbol
     });
 
     this.yahooSnapshotCache.set(cacheKey, {
@@ -339,7 +340,8 @@ class PortfolioQueryService {
       assetType: 'equity',
       idType: lookup.idType,
       id: lookup.id,
-      name: lookup.name
+      name: lookup.name,
+      yahooSymbol: lookup.yahooSymbol
     });
 
     this.yahooSnapshotCache.set(cacheKey, {
