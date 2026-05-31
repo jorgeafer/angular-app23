@@ -27,7 +27,7 @@
 
 @media (max-width: 768px) {
   .page-shell {
-    padding: 24px 16px 80px;
+    padding: 16px 16px 84px;
   }
 }
 
@@ -1253,9 +1253,9 @@ strong.positive {
 
 @media (max-width: 640px) {
   .page-shell {
-    padding-top: 72px;
+    padding-top: 16px;
     padding-inline: 16px;
-    padding-bottom: 88px;
+    padding-bottom: 92px;
   }
 
   .hero {
