@@ -5,6 +5,8 @@ export interface YahooLookupRequest {
   assetType: YahooAssetType;
   idType: YahooIdentifierType;
   id: string;
+  yahooSymbol?: string;
+  name?: string;
 }
 
 export interface YahooFundApiDetails {

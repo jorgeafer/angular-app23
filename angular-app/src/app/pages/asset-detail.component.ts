@@ -554,11 +554,22 @@ export class AssetDetailComponent implements OnInit {
 
   private resolveLookup(
     asset: PortfolioRow
-  ): { assetType: YahooAssetType; idType: YahooIdentifierType; id: string } | null {
+  ): { assetType: YahooAssetType; idType: YahooIdentifierType; id: string; yahooSymbol?: string; name?: string } | null {
     const assetType: YahooAssetType = asset.section === 'FONDOS' ? 'fund' : 'equity';
 
+    // Si el usuario especificó un yahooSymbol, usarlo directamente
+    if (asset.yahooSymbol) {
+      return {
+        assetType,
+        idType: 'symbol',
+        id: asset.yahooSymbol,
+        yahooSymbol: asset.yahooSymbol,
+        name: asset.name
+      };
+    }
+
     if (assetType === 'fund') {
-      return asset.isin ? { assetType, idType: 'isin', id: asset.isin } : null;
+      return asset.isin ? { assetType, idType: 'isin', id: asset.isin, name: asset.name } : null;
     }
 
     if (asset.isin) {

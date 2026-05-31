@@ -9,7 +9,9 @@ function createYahooRouter(service = new YahooFinanceService()) {
       const payload = await service.getAssetDetails({
         assetType: req.query.assetType,
         idType: req.query.idType,
-        id: req.query.id
+        id: req.query.id,
+        yahooSymbol: req.query.yahooSymbol,
+        name: req.query.name
       });
 
       res.json(payload);

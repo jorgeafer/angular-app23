@@ -25,6 +25,11 @@ function createDefaultProvider() {
     },
 
     async getFundSnapshot(request) {
+      // Si el usuario especificó un yahooSymbol, usar Yahoo Finance directamente
+      if (request.yahooSymbol) {
+        return await yf.getFundSnapshot(request);
+      }
+
       // Intentar Yahoo Finance primero (para fondos que SÍ están allí)
       try {
         return await yf.getFundSnapshot(request);

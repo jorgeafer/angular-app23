@@ -20,10 +20,18 @@ export class YahooFinanceAssetService {
   constructor(private readonly http: HttpClient) {}
 
   getAssetDetails(request: YahooLookupRequest): Observable<YahooDetailsViewModel> {
-    const params = new HttpParams()
+    let params = new HttpParams()
       .set('assetType', request.assetType)
       .set('idType', request.idType)
       .set('id', request.id);
+
+    if (request.yahooSymbol) {
+      params = params.set('yahooSymbol', request.yahooSymbol);
+    }
+
+    if (request.name) {
+      params = params.set('name', request.name);
+    }
 
     return this.http.get<YahooApiDetails>(this.baseUrl, { params }).pipe(map((response) => this.toViewModel(response)));
   }
