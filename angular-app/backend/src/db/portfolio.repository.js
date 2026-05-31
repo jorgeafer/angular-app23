@@ -88,6 +88,7 @@ class PortfolioRepository {
     `);
 
     await this.ensureColumn('positions', 'investment_class', 'TEXT');
+    await this.ensureColumn('positions', 'yahoo_symbol', 'TEXT');
   }
 
   async ensureColumn(tableName, columnName, definition) {
