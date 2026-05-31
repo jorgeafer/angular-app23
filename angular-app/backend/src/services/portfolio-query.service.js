@@ -466,6 +466,7 @@ function mapPositionRow(row) {
     ticker: row.ticker || undefined,
     symbol: row.symbol || undefined,
     performanceId: row.performance_id || undefined,
+    yahooSymbol: row.yahoo_symbol || undefined,
     shares: row.shares,
     currency: row.currency,
     type: normalizePositionType(row.section, row.type),
