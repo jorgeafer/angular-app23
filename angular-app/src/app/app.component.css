@@ -2,37 +2,11 @@
   display: block;
 }
 
-.app-logout {
-  position: fixed;
-  top: 18px;
-  right: 18px;
-  z-index: 20;
-  padding: 10px 14px;
-  border: 1px solid rgba(20, 49, 59, 0.12);
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.94);
-  color: #14313b;
-  font: inherit;
-  font-size: 0.9rem;
-  font-weight: 700;
-  cursor: pointer;
-  box-shadow: 0 12px 30px rgba(26, 47, 58, 0.12);
-  backdrop-filter: blur(10px);
-}
+/* Header and nav are defined in global styles.css */
+/* Local overrides can go here if needed */
 
-.app-logout:hover {
-  border-color: rgba(11, 122, 117, 0.3);
-  color: #0b7a75;
-}
-
-@media (max-width: 640px) {
-  .app-logout {
-    top: 12px;
-    right: 12px;
-    left: 12px;
-    width: auto;
-    justify-content: center;
-    padding-block: 12px;
-    font-size: 0.85rem;
+@media (max-width: 768px) {
+  :host {
+    padding-bottom: 64px;
   }
 }

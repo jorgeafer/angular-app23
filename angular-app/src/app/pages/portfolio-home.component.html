@@ -545,6 +545,51 @@
                 </tbody>
               </table>
             </div>
+
+            <!-- Mobile position cards view -->
+            <div class="positions-mobile">
+              @for (row of section.rows; track trackByRow($index, row)) {
+                <a class="position-card" [routerLink]="getDetailRoute(row)">
+                  <div class="position-card__header">
+                    <div class="position-card__name">
+                      <strong>{{ row.name }}</strong>
+                      <span>{{ row.isin || 'Sin ISIN' }}</span>
+                    </div>
+                    <span class="badge" [class.positive]="row.totalReturnValue > 0" [class.negative]="row.totalReturnValue < 0">
+                      {{ row.totalReturn }}
+                    </span>
+                  </div>
+                  <div class="position-card__metrics">
+                    <div>
+                      <span>Valor actual</span>
+                      <strong>{{ row.totalValuation }}</strong>
+                    </div>
+                    <div>
+                      <span>Invertido</span>
+                      <strong>{{ row.totalInvested }}</strong>
+                    </div>
+                    <div>
+                      <span>Ganancia</span>
+                      <strong [class.text-positive]="row.profitEurosValue > 0" [class.text-negative]="row.profitEurosValue < 0">
+                        {{ row.profitEuros }}
+                      </strong>
+                    </div>
+                    <div>
+                      <span>Peso</span>
+                      <strong>{{ row.valuationWeight || '-' }}</strong>
+                    </div>
+                  </div>
+                  <div class="position-card__footer">
+                    <span>{{ row.shares }} participaciones</span>
+                    <span>{{ row.marketDate }}</span>
+                  </div>
+                </a>
+              } @empty {
+                <div class="empty-state">
+                  <p>No hay posiciones que cumplan los filtros actuales.</p>
+                </div>
+              }
+            </div>
           </article>
         }
       </section>
