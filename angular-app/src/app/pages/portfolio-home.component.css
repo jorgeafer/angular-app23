@@ -29,6 +29,26 @@
   .page-shell {
     padding: 16px 16px 84px;
   }
+
+  /* Reduce gaps in mobile */
+  .section-grid {
+    gap: 8px;
+  }
+
+  .hero-card,
+  .toolbar-card,
+  .portfolio-card {
+    margin-bottom: 12px;
+  }
+
+  .portfolio-card__header {
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .position-card {
+    gap: 8px;
+  }
 }
 
 .hero,
@@ -1253,18 +1273,18 @@ strong.positive {
 
 @media (max-width: 640px) {
   .page-shell {
-    padding-top: 16px;
-    padding-inline: 16px;
+    padding-top: 12px;
+    padding-inline: 12px;
     padding-bottom: 92px;
   }
 
   .hero {
-    gap: 18px;
-    margin-bottom: 18px;
+    gap: 12px;
+    margin-bottom: 12px;
   }
 
   .hero-side {
-    gap: 10px;
+    gap: 8px;
   }
 
   .hero-card,
