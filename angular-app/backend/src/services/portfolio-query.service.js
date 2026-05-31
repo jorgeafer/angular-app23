@@ -526,8 +526,13 @@ function mapOperationRow(row) {
 }
 
 function resolveYahooLookup(row) {
+  // Si hay un yahooSymbol explícito, usarlo directamente
+  if (row.yahooSymbol) {
+    return { idType: 'symbol', id: row.yahooSymbol, name: row.name, yahooSymbol: row.yahooSymbol };
+  }
+
   if (row.isin) {
-    return { idType: 'isin', id: row.isin, name: row.name, yahooSymbol: row.yahoo_symbol };
+    return { idType: 'isin', id: row.isin, name: row.name, yahooSymbol: row.yahooSymbol };
   }
 
   if (row.symbol) {
