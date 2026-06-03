@@ -1155,6 +1155,20 @@ strong.positive {
     align-items: start;
   }
 
+  .toolbar-card {
+    gap: 12px;
+  }
+
+  .toolbar-filters {
+    flex: 1 0 auto;
+    gap: 12px;
+    width: 100%;
+  }
+
+  .toolbar-summary {
+    flex: none;
+  }
+
   .hero-side,
   .toolbar-summary,
   .hero-card,
@@ -1295,7 +1309,10 @@ strong.positive {
     padding-inline: 18px;
   }
 
-  .toolbar-card,
+  .toolbar-card {
+    padding: 14px 16px;
+  }
+
   .portfolio-trend-card,
   .chart-card {
     padding-block: 18px;
@@ -1311,18 +1328,25 @@ strong.positive {
     justify-content: center;
   }
 
+  .toolbar-filters {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .toolbar-filters > label:last-of-type,
+  .toolbar-filters > .chip-row {
+    grid-column: 1 / -1;
+  }
+
   .field {
     min-width: 0;
     width: 100%;
   }
 
-  .chip-row,
-  .chip-row button {
+  .chip-row {
     width: 100%;
-  }
-
-  .chip-row button {
-    justify-content: center;
+    justify-content: flex-start;
   }
 
   .portfolio-card__header h2 {
