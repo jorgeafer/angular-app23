@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import {
@@ -42,7 +42,7 @@ type ComparatorSide = 'left' | 'right';
   templateUrl: './portfolio-home.component.html',
   styleUrl: './portfolio-home.component.css'
 })
-export class PortfolioHomeComponent implements OnInit {
+export class PortfolioHomeComponent implements OnInit, OnDestroy {
   protected readonly formatDateEs = formatDateEs;
   protected readonly investmentClassOptions = ['RF', 'RV', 'Mixto', 'Otro'];
   protected readonly currencyOptions = ['EUR', 'USD', 'GBP', 'CHF'];
@@ -176,6 +176,8 @@ export class PortfolioHomeComponent implements OnInit {
     private readonly route: ActivatedRoute
   ) {}
 
+  private readonly onRefreshPricesEvent = () => this.refreshPrices();
+
   async ngOnInit(): Promise<void> {
     const routeData = this.route.snapshot.data;
     this.pageTitle = routeData['pageTitle'] ?? this.pageTitle;
@@ -186,7 +188,12 @@ export class PortfolioHomeComponent implements OnInit {
     this.showDevaLink = routeData['showDevaLink'] ?? this.showDevaLink;
     this.showMainLink = routeData['showMainLink'] ?? this.showMainLink;
     this.allowedSections = routeData['allowedSections'] ?? this.allowedSections;
+    window.addEventListener('portfolio:refreshPrices', this.onRefreshPricesEvent);
     await this.loadPortfolio();
+  }
+
+  ngOnDestroy(): void {
+    window.removeEventListener('portfolio:refreshPrices', this.onRefreshPricesEvent);
   }
 
   protected trackBySection(_: number, section: PortfolioSection): string {
@@ -832,6 +839,7 @@ export class PortfolioHomeComponent implements OnInit {
     this.isRefreshingPrices = true;
     this.refreshPricesMessage = '';
     this.refreshPricesError = '';
+    window.dispatchEvent(new CustomEvent('portfolio:refreshState', { detail: { isRefreshing: true } }));
 
     try {
       const result = await this.portfolioDataService.refreshPrices(this.portfolioKey);
@@ -841,6 +849,7 @@ export class PortfolioHomeComponent implements OnInit {
       this.refreshPricesError = error instanceof Error ? error.message : 'No se pudo actualizar los precios.';
     } finally {
       this.isRefreshingPrices = false;
+      window.dispatchEvent(new CustomEvent('portfolio:refreshState', { detail: { isRefreshing: false } }));
     }
   }
 
