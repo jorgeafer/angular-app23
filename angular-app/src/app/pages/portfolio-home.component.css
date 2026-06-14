@@ -27,7 +27,7 @@
 
 @media (max-width: 768px) {
   .page-shell {
-    padding: 16px 16px 84px;
+    padding: 16px 16px 24px;
   }
 
   /* Reduce gaps in mobile */
@@ -1344,7 +1344,7 @@ strong.positive {
   .page-shell {
     padding-top: 12px;
     padding-inline: 12px;
-    padding-bottom: 92px;
+    padding-bottom: 24px;
   }
 
   .hero {

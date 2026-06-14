@@ -1,11 +1,11 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
-import { Router, RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
+import { Router, RouterOutlet } from '@angular/router';
 import { AuthService } from './services/auth.service';
 
 @Component({
   selector: 'app-root',
-  imports: [CommonModule, RouterOutlet, RouterLink, RouterLinkActive],
+  imports: [CommonModule, RouterOutlet],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css'
 })
@@ -39,10 +39,4 @@ export class AppComponent implements OnInit, OnDestroy {
     window.dispatchEvent(new CustomEvent('portfolio:refreshPrices'));
   }
 
-  protected openQuickAdd(): void {
-    const currentRoute = this.router.routerState.root.firstChild?.component?.name || '';
-    if (currentRoute.includes('PortfolioHome')) {
-      window.dispatchEvent(new CustomEvent('portfolio:openAddModal'));
-    }
-  }
 }
