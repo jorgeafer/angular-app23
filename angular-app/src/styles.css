@@ -481,3 +481,15 @@ header.app-header {
     display: block;
   }
 }
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+.bottom-nav__item--refreshing {
+  color: var(--c-accent);
+}

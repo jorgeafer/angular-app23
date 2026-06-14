@@ -1,4 +1,4 @@
-import { CommonModule } from '@angular/common';
+
 import { Component, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
@@ -18,7 +18,7 @@ import { formatDateEs } from '../utils/formatting';
 
 @Component({
   selector: 'app-asset-detail',
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink],
   templateUrl: './asset-detail.component.html',
   styleUrl: './asset-detail.component.css'
 })

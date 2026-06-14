@@ -5,8 +5,3 @@
 /* Header and nav are defined in global styles.css */
 /* Local overrides can go here if needed */
 
-@media (max-width: 768px) {
-  :host {
-    padding-bottom: 64px;
-  }
-}

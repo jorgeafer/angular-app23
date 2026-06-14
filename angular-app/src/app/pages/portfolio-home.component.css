@@ -27,7 +27,7 @@
 
 @media (max-width: 768px) {
   .page-shell {
-    padding: 16px 16px 84px;
+    padding: 16px 16px 24px;
   }
 
   /* Reduce gaps in mobile */
@@ -1155,6 +1155,20 @@ strong.positive {
     align-items: start;
   }
 
+  .toolbar-card {
+    gap: 12px;
+  }
+
+  .toolbar-filters {
+    flex: 1 0 auto;
+    gap: 12px;
+    width: 100%;
+  }
+
+  .toolbar-summary {
+    flex: none;
+  }
+
   .hero-side,
   .toolbar-summary,
   .hero-card,
@@ -1257,6 +1271,61 @@ strong.positive {
   color: var(--muted);
 }
 
+.position-card--editing {
+  border-color: rgba(11, 122, 117, 0.3);
+  background: rgba(11, 122, 117, 0.02);
+}
+
+.position-card__edit-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.position-card__edit-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+  margin-top: 4px;
+}
+
+.mobile-edit-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 2px 0;
+}
+
+.mobile-edit-label {
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 600;
+  width: 52px;
+  flex-shrink: 0;
+}
+
+.mobile-edit-value {
+  flex: 1;
+  font-size: 13px;
+  color: var(--ink);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mobile-edit-input {
+  flex: 1;
+  min-height: 34px;
+  font-size: 14px;
+  padding: 0 10px;
+  border-radius: 8px;
+}
+
 .positions-desktop {
   display: block;
 }
@@ -1275,7 +1344,7 @@ strong.positive {
   .page-shell {
     padding-top: 12px;
     padding-inline: 12px;
-    padding-bottom: 92px;
+    padding-bottom: 24px;
   }
 
   .hero {
@@ -1295,7 +1364,10 @@ strong.positive {
     padding-inline: 18px;
   }
 
-  .toolbar-card,
+  .toolbar-card {
+    padding: 14px 16px;
+  }
+
   .portfolio-trend-card,
   .chart-card {
     padding-block: 18px;
@@ -1311,18 +1383,25 @@ strong.positive {
     justify-content: center;
   }
 
+  .toolbar-filters {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .toolbar-filters > label:last-of-type,
+  .toolbar-filters > .chip-row {
+    grid-column: 1 / -1;
+  }
+
   .field {
     min-width: 0;
     width: 100%;
   }
 
-  .chip-row,
-  .chip-row button {
+  .chip-row {
     width: 100%;
-  }
-
-  .chip-row button {
-    justify-content: center;
+    justify-content: flex-start;
   }
 
   .portfolio-card__header h2 {
