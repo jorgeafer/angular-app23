@@ -956,6 +956,10 @@ export class PortfolioHomeComponent implements OnInit, OnDestroy {
     };
   }
 
+  protected cancelEditingCell(): void {
+    this.editingCell = null;
+  }
+
   protected updateEditingValue(value: string): void {
     if (!this.editingCell) {
       return;

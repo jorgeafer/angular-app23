@@ -537,59 +537,98 @@
                         <span>{{ row.isin || 'Sin ISIN' }}</span>
                       </div>
                       <div class="position-card__edit-actions">
-                        <a class="icon-button" [routerLink]="getDetailRoute(row)" aria-label="Editar ficha">
-                          <svg viewBox="0 0 24 24" aria-hidden="true">
-                            <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm17.71-10.04a1.003 1.003 0 0 0 0-1.42l-2.5-2.5a1.003 1.003 0 0 0-1.42 0l-1.96 1.96 3.75 3.75 2.13-1.79z"/>
-                          </svg>
-                        </a>
                         @if (section.title === 'FONDOS') {
-                          <button
-                            type="button"
-                            class="icon-button icon-button--danger"
-                            (click)="openDeleteFundModal(row, $event)"
-                            aria-label="Eliminar fondo"
-                          >
-                            <svg viewBox="0 0 24 24" aria-hidden="true">
-                              <path d="M18 6 6 18M6 6l12 12" />
-                            </svg>
+                          <button type="button" class="icon-button icon-button--danger" (click)="openDeleteFundModal(row, $event)" aria-label="Eliminar fondo">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
                           </button>
                         } @else {
-                          <button
-                            type="button"
-                            class="icon-button icon-button--danger"
-                            (click)="openDeleteEquityModal(row, $event)"
-                            aria-label="Eliminar accion"
-                          >
-                            <svg viewBox="0 0 24 24" aria-hidden="true">
-                              <path d="M18 6 6 18M6 6l12 12" />
-                            </svg>
+                          <button type="button" class="icon-button icon-button--danger" (click)="openDeleteEquityModal(row, $event)" aria-label="Eliminar accion">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
                           </button>
                         }
                       </div>
                     </div>
-                    <div class="position-card__metrics">
-                      <div>
-                        <span>Valor actual</span>
-                        <strong>{{ row.totalValuation }}</strong>
+
+                    <!-- Campos editables inline -->
+                    <div class="position-card__edit-fields">
+                      <!-- Tipo -->
+                      <div class="mobile-edit-row" (click)="$event.stopPropagation()">
+                        @if (isEditingCell(row.id, 'type')) {
+                          <input class="editable-cell__input mobile-edit-input" type="text" [ngModel]="editingCell?.draftValue || ''" (ngModelChange)="updateEditingValue($event)" placeholder="Tipo" />
+                          <button type="button" class="icon-button icon-button--confirm" (click)="saveEditingCell(row, 'type', $event)" [disabled]="isSavingCell(row.id, 'type')" aria-label="Guardar tipo">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z" /></svg>
+                          </button>
+                          <button type="button" class="icon-button" (click)="cancelEditingCell()" aria-label="Cancelar">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                          </button>
+                        } @else {
+                          <span class="mobile-edit-label">Tipo</span>
+                          <span class="mobile-edit-value">{{ row.type || 'Sin tipo' }}</span>
+                          <button type="button" class="icon-button" (click)="startEditingCell(row, 'type', $event)" aria-label="Editar tipo">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm17.71-10.04a1.003 1.003 0 0 0 0-1.42l-2.5-2.5a1.003 1.003 0 0 0-1.42 0l-1.96 1.96 3.75 3.75 2.13-1.79z"/></svg>
+                          </button>
+                        }
                       </div>
-                      <div>
-                        <span>Invertido</span>
-                        <strong>{{ row.totalInvested }}</strong>
+                      <!-- Divisa -->
+                      <div class="mobile-edit-row" (click)="$event.stopPropagation()">
+                        @if (isEditingCell(row.id, 'currency')) {
+                          <select class="editable-cell__input editable-cell__select mobile-edit-input" [ngModel]="editingCell?.draftValue || currencyOptions[0]" (ngModelChange)="updateEditingValue($event)">
+                            @for (option of currencyOptions; track option) { <option [value]="option">{{ option }}</option> }
+                          </select>
+                          <button type="button" class="icon-button icon-button--confirm" (click)="saveEditingCell(row, 'currency', $event)" [disabled]="isSavingCell(row.id, 'currency')" aria-label="Guardar divisa">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z" /></svg>
+                          </button>
+                          <button type="button" class="icon-button" (click)="cancelEditingCell()" aria-label="Cancelar">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                          </button>
+                        } @else {
+                          <span class="mobile-edit-label">Divisa</span>
+                          <span class="mobile-edit-value">{{ row.currency || 'N/D' }}</span>
+                          <button type="button" class="icon-button" (click)="startEditingCell(row, 'currency', $event)" aria-label="Editar divisa">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm17.71-10.04a1.003 1.003 0 0 0 0-1.42l-2.5-2.5a1.003 1.003 0 0 0-1.42 0l-1.96 1.96 3.75 3.75 2.13-1.79z"/></svg>
+                          </button>
+                        }
                       </div>
-                      <div>
-                        <span>Ganancia</span>
-                        <strong [class.text-positive]="row.profitEurosValue > 0" [class.text-negative]="row.profitEurosValue < 0">
-                          {{ row.profitEuros }}
-                        </strong>
-                      </div>
-                      <div>
-                        <span>Peso</span>
-                        <strong>{{ row.valuationWeight || '-' }}</strong>
-                      </div>
-                    </div>
-                    <div class="position-card__footer">
-                      <span>{{ row.shares }} participaciones</span>
-                      <span>{{ row.marketDate }}</span>
+                      @if (section.title === 'FONDOS') {
+                        <!-- Clase de inversión (solo fondos) -->
+                        <div class="mobile-edit-row" (click)="$event.stopPropagation()">
+                          @if (isEditingCell(row.id, 'investmentClass')) {
+                            <select class="editable-cell__input editable-cell__select mobile-edit-input" [ngModel]="editingCell?.draftValue || investmentClassOptions[0]" (ngModelChange)="updateEditingValue($event)">
+                              @for (option of investmentClassOptions; track option) { <option [value]="option">{{ option }}</option> }
+                            </select>
+                            <button type="button" class="icon-button icon-button--confirm" (click)="saveEditingCell(row, 'investmentClass', $event)" [disabled]="isSavingCell(row.id, 'investmentClass')" aria-label="Guardar clase">
+                              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z" /></svg>
+                            </button>
+                            <button type="button" class="icon-button" (click)="cancelEditingCell()" aria-label="Cancelar">
+                              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                            </button>
+                          } @else {
+                            <span class="mobile-edit-label">Clase</span>
+                            <span class="mobile-edit-value">{{ row.investmentClass || '-' }}</span>
+                            <button type="button" class="icon-button" (click)="startEditingCell(row, 'investmentClass', $event)" aria-label="Editar clase">
+                              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm17.71-10.04a1.003 1.003 0 0 0 0-1.42l-2.5-2.5a1.003 1.003 0 0 0-1.42 0l-1.96 1.96 3.75 3.75 2.13-1.79z"/></svg>
+                            </button>
+                          }
+                        </div>
+                        <!-- Yahoo Symbol (solo fondos) -->
+                        <div class="mobile-edit-row" (click)="$event.stopPropagation()">
+                          @if (isEditingCell(row.id, 'yahooSymbol')) {
+                            <input class="editable-cell__input mobile-edit-input" type="text" [ngModel]="editingCell?.draftValue || ''" (ngModelChange)="updateEditingValue($event)" placeholder="ej: 0P0001J9GX.F" />
+                            <button type="button" class="icon-button icon-button--confirm" (click)="saveEditingCell(row, 'yahooSymbol', $event)" [disabled]="isSavingCell(row.id, 'yahooSymbol')" aria-label="Guardar símbolo">
+                              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z" /></svg>
+                            </button>
+                            <button type="button" class="icon-button" (click)="cancelEditingCell()" aria-label="Cancelar">
+                              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                            </button>
+                          } @else {
+                            <span class="mobile-edit-label">Yahoo</span>
+                            <span class="mobile-edit-value">{{ row.yahooSymbol || '-' }}</span>
+                            <button type="button" class="icon-button" (click)="startEditingCell(row, 'yahooSymbol', $event)" aria-label="Editar símbolo de Yahoo">
+                              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm17.71-10.04a1.003 1.003 0 0 0 0-1.42l-2.5-2.5a1.003 1.003 0 0 0-1.42 0l-1.96 1.96 3.75 3.75 2.13-1.79z"/></svg>
+                            </button>
+                          }
+                        </div>
+                      }
                     </div>
                   </div>
                 } @else {
