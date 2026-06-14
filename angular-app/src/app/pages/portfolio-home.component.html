@@ -529,41 +529,106 @@
             <!-- Mobile position cards view -->
             <div class="positions-mobile">
               @for (row of section.rows; track trackByRow($index, row)) {
-                <a class="position-card" [routerLink]="getDetailRoute(row)">
-                  <div class="position-card__header">
-                    <div class="position-card__name">
-                      <strong>{{ row.name }}</strong>
-                      <span>{{ row.isin || 'Sin ISIN' }}</span>
+                @if ((section.title === 'FONDOS' && isFundEditMode) || (section.title === 'ACCIONES' && isEquityEditMode)) {
+                  <div class="position-card position-card--editing">
+                    <div class="position-card__header">
+                      <div class="position-card__name">
+                        <strong>{{ row.name }}</strong>
+                        <span>{{ row.isin || 'Sin ISIN' }}</span>
+                      </div>
+                      <div class="position-card__edit-actions">
+                        <a class="icon-button" [routerLink]="getDetailRoute(row)" aria-label="Editar ficha">
+                          <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm17.71-10.04a1.003 1.003 0 0 0 0-1.42l-2.5-2.5a1.003 1.003 0 0 0-1.42 0l-1.96 1.96 3.75 3.75 2.13-1.79z"/>
+                          </svg>
+                        </a>
+                        @if (section.title === 'FONDOS') {
+                          <button
+                            type="button"
+                            class="icon-button icon-button--danger"
+                            (click)="openDeleteFundModal(row, $event)"
+                            aria-label="Eliminar fondo"
+                          >
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                              <path d="M18 6 6 18M6 6l12 12" />
+                            </svg>
+                          </button>
+                        } @else {
+                          <button
+                            type="button"
+                            class="icon-button icon-button--danger"
+                            (click)="openDeleteEquityModal(row, $event)"
+                            aria-label="Eliminar accion"
+                          >
+                            <svg viewBox="0 0 24 24" aria-hidden="true">
+                              <path d="M18 6 6 18M6 6l12 12" />
+                            </svg>
+                          </button>
+                        }
+                      </div>
                     </div>
-                    <span class="badge" [class.positive]="row.totalReturnValue > 0" [class.negative]="row.totalReturnValue < 0">
-                      {{ row.totalReturn }}
-                    </span>
+                    <div class="position-card__metrics">
+                      <div>
+                        <span>Valor actual</span>
+                        <strong>{{ row.totalValuation }}</strong>
+                      </div>
+                      <div>
+                        <span>Invertido</span>
+                        <strong>{{ row.totalInvested }}</strong>
+                      </div>
+                      <div>
+                        <span>Ganancia</span>
+                        <strong [class.text-positive]="row.profitEurosValue > 0" [class.text-negative]="row.profitEurosValue < 0">
+                          {{ row.profitEuros }}
+                        </strong>
+                      </div>
+                      <div>
+                        <span>Peso</span>
+                        <strong>{{ row.valuationWeight || '-' }}</strong>
+                      </div>
+                    </div>
+                    <div class="position-card__footer">
+                      <span>{{ row.shares }} participaciones</span>
+                      <span>{{ row.marketDate }}</span>
+                    </div>
                   </div>
-                  <div class="position-card__metrics">
-                    <div>
-                      <span>Valor actual</span>
-                      <strong>{{ row.totalValuation }}</strong>
+                } @else {
+                  <a class="position-card" [routerLink]="getDetailRoute(row)">
+                    <div class="position-card__header">
+                      <div class="position-card__name">
+                        <strong>{{ row.name }}</strong>
+                        <span>{{ row.isin || 'Sin ISIN' }}</span>
+                      </div>
+                      <span class="badge" [class.positive]="row.totalReturnValue > 0" [class.negative]="row.totalReturnValue < 0">
+                        {{ row.totalReturn }}
+                      </span>
                     </div>
-                    <div>
-                      <span>Invertido</span>
-                      <strong>{{ row.totalInvested }}</strong>
+                    <div class="position-card__metrics">
+                      <div>
+                        <span>Valor actual</span>
+                        <strong>{{ row.totalValuation }}</strong>
+                      </div>
+                      <div>
+                        <span>Invertido</span>
+                        <strong>{{ row.totalInvested }}</strong>
+                      </div>
+                      <div>
+                        <span>Ganancia</span>
+                        <strong [class.text-positive]="row.profitEurosValue > 0" [class.text-negative]="row.profitEurosValue < 0">
+                          {{ row.profitEuros }}
+                        </strong>
+                      </div>
+                      <div>
+                        <span>Peso</span>
+                        <strong>{{ row.valuationWeight || '-' }}</strong>
+                      </div>
                     </div>
-                    <div>
-                      <span>Ganancia</span>
-                      <strong [class.text-positive]="row.profitEurosValue > 0" [class.text-negative]="row.profitEurosValue < 0">
-                        {{ row.profitEuros }}
-                      </strong>
+                    <div class="position-card__footer">
+                      <span>{{ row.shares }} participaciones</span>
+                      <span>{{ row.marketDate }}</span>
                     </div>
-                    <div>
-                      <span>Peso</span>
-                      <strong>{{ row.valuationWeight || '-' }}</strong>
-                    </div>
-                  </div>
-                  <div class="position-card__footer">
-                    <span>{{ row.shares }} participaciones</span>
-                    <span>{{ row.marketDate }}</span>
-                  </div>
-                </a>
+                  </a>
+                }
               } @empty {
                 <div class="empty-state">
                   <p>No hay posiciones que cumplan los filtros actuales.</p>

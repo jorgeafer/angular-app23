@@ -1271,6 +1271,18 @@ strong.positive {
   color: var(--muted);
 }
 
+.position-card--editing {
+  border-color: rgba(11, 122, 117, 0.3);
+  background: rgba(11, 122, 117, 0.02);
+}
+
+.position-card__edit-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
 .positions-desktop {
   display: block;
 }
