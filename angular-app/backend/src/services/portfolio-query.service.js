@@ -648,50 +648,48 @@ function recalculateSectionRows(rows) {
 }
 
 function applyEditableValue(row, field, nextValue) {
+  // Always start with full row copy to preserve all fields
+  const nextRow = { ...row };
+
   if (field === 'investmentClass') {
-    return {
-      ...row,
-      investmentClass: nextValue
-    };
+    nextRow.investmentClass = nextValue;
+    return nextRow;
   }
 
   if (field === 'type') {
-    return {
-      ...row,
-      type: nextValue
-    };
+    nextRow.type = nextValue;
+    return nextRow;
   }
 
   if (field === 'currency') {
-    return {
-      ...row,
-      currency: nextValue
-    };
+    nextRow.currency = nextValue;
+    return nextRow;
   }
 
   if (field === 'yahooSymbol') {
-    return {
-      ...row,
-      yahooSymbol: nextValue
-    };
+    nextRow.yahooSymbol = nextValue;
+    return nextRow;
   }
 
-  const nextRow = {
-    ...row,
-    sharesValue: field === 'shares' ? nextValue : row.sharesValue,
-    totalInvestedValue: field === 'totalInvested' ? roundMoney(nextValue) : row.totalInvestedValue
-  };
+  // For numeric fields: shares and totalInvested
+  if (field === 'shares') {
+    nextRow.sharesValue = nextValue;
+    nextRow.shares = formatEditableShares(nextValue, row.shares);
+  } else if (field === 'totalInvested') {
+    nextRow.totalInvestedValue = roundMoney(nextValue);
+    nextRow.totalInvested = formatCurrency(nextRow.totalInvestedValue);
+  }
 
-  nextRow.shares = formatEditableShares(nextRow.sharesValue, row.shares);
-  nextRow.totalInvested = formatCurrency(nextRow.totalInvestedValue);
-  const derivedMetrics = buildDerivedMetrics(nextRow);
-
-  nextRow.totalValuationValue = derivedMetrics.totalValuationValue;
-  nextRow.totalValuation = derivedMetrics.totalValuation;
-  nextRow.profitEurosValue = derivedMetrics.profitEurosValue;
-  nextRow.profitEuros = derivedMetrics.profitEuros;
-  nextRow.totalReturnValue = derivedMetrics.totalReturnValue;
-  nextRow.totalReturn = derivedMetrics.totalReturn;
+  // Recalculate derived metrics for both shares and totalInvested changes
+  if (field === 'shares' || field === 'totalInvested') {
+    const derivedMetrics = buildDerivedMetrics(nextRow);
+    nextRow.totalValuationValue = derivedMetrics.totalValuationValue;
+    nextRow.totalValuation = derivedMetrics.totalValuation;
+    nextRow.profitEurosValue = derivedMetrics.profitEurosValue;
+    nextRow.profitEuros = derivedMetrics.profitEuros;
+    nextRow.totalReturnValue = derivedMetrics.totalReturnValue;
+    nextRow.totalReturn = derivedMetrics.totalReturn;
+  }
 
   return nextRow;
 }
