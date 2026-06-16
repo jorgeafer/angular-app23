@@ -732,14 +732,15 @@ export class PortfolioHomeComponent implements OnInit, OnDestroy {
     }
   }
 
-  protected toggleFundEditMode(): void {
-    this.isFundEditMode = !this.isFundEditMode;
-
-    if (!this.isFundEditMode) {
+  protected async toggleFundEditMode(): Promise<void> {
+    if (this.isFundEditMode) {
+      await this.commitPendingCellEdit();
       this.editingCell = null;
       this.savingCellKey = '';
       this.closeDeleteFundModal();
     }
+
+    this.isFundEditMode = !this.isFundEditMode;
   }
 
   protected openAddFundModal(): void {
@@ -859,7 +860,14 @@ export class PortfolioHomeComponent implements OnInit, OnDestroy {
     return false;
   }
 
-  protected toggleEquityEditMode(): void {
+  protected async toggleEquityEditMode(): Promise<void> {
+    if (this.isEquityEditMode) {
+      await this.commitPendingCellEdit();
+      this.editingCell = null;
+      this.savingCellKey = '';
+      this.closeDeleteEquityModal();
+    }
+
     this.isEquityEditMode = !this.isEquityEditMode;
   }
 
@@ -982,25 +990,38 @@ export class PortfolioHomeComponent implements OnInit, OnDestroy {
       return;
     }
 
-    const value = this.editingCell.draftValue.trim();
+    await this.commitEditingCell(row.id, field, this.editingCell.draftValue);
+  }
+
+  private async commitEditingCell(rowId: string, field: EditablePortfolioField, draftValue: string): Promise<void> {
+    const value = draftValue.trim();
 
     if (!value) {
       this.errorMessage = 'El valor no puede estar vacio.';
       return;
     }
 
-    this.savingCellKey = this.getCellKey(row.id, field);
+    this.savingCellKey = this.getCellKey(rowId, field);
     this.errorMessage = '';
 
     try {
-      await this.portfolioDataService.updateAssetValue(row.id, field, value, this.portfolioKey);
-      this.applyEditedValueLocally(row.id, field, value);
+      await this.portfolioDataService.updateAssetValue(rowId, field, value, this.portfolioKey);
+      this.applyEditedValueLocally(rowId, field, value);
       this.editingCell = null;
     } catch (error) {
       this.errorMessage = error instanceof Error ? error.message : 'No se pudo guardar el cambio.';
     } finally {
       this.savingCellKey = '';
     }
+  }
+
+  private async commitPendingCellEdit(): Promise<void> {
+    if (!this.editingCell) {
+      return;
+    }
+
+    const { rowId, field, draftValue } = this.editingCell;
+    await this.commitEditingCell(rowId, field, draftValue);
   }
 
   protected async applySelectedDate(): Promise<void> {
