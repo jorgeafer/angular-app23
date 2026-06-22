@@ -440,7 +440,6 @@ canvas {
   transform: scale(0.98);
 }
 
-/* Sticky header for desktop */
 header.app-header {
   position: sticky;
   top: 0;
@@ -453,6 +452,16 @@ header.app-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+}
+
+@media (max-width: 768px) {
+  header.app-header {
+    padding: 0 12px;
+  }
+
+  .app-header__logo {
+    font-size: 16px;
+  }
 }
 
 .app-header__logo {

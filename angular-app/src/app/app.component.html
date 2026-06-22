@@ -1,6 +1,5 @@
 @if (showLogout()) {
-  <!-- Desktop header -->
-  <header class="app-header desktop-only">
+  <header class="app-header">
     <div class="app-header__logo">MiCartera</div>
     <div class="app-header__actions">
       <button
@@ -24,7 +23,7 @@
         }
       </button>
       <button type="button" class="app-button-secondary" (click)="logout()">
-        {{ username() ? username() + ' · ' : '' }}Cerrar sesión
+        <span class="desktop-only">{{ username() ? username() + ' · ' : '' }}</span>Cerrar sesión
       </button>
     </div>
   </header>
