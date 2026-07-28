@@ -396,7 +396,7 @@ export class AssetDetailComponent implements OnInit, OnDestroy {
   }
 
   protected get canManageOperations(): boolean {
-    return this.portfolioKey === 'main';
+    return true;
   }
 
   protected get isOperationFormVisible(): boolean {
