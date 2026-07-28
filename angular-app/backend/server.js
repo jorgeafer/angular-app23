@@ -78,7 +78,7 @@ async function createApp() {
     const isin = req.query.isin ?? null;
     const morningstarId = id.match(/^(0P[A-Z0-9]+)(?:\.F)?$/i)?.[1]?.toUpperCase() ?? null;
 
-    const [yahooResult, dwsResult, scraperResult, cnmvResult] = await Promise.allSettled([
+    const [yahooResult, dwsResult, scraperResult, cnmvResult, stooqResult] = await Promise.allSettled([
       yahoo.fetchChart(id),
       appEnv.provider === 'dws' && morningstarId
         ? new DwsMorningstarProvider().getAssetDetails({ assetType: 'fund', idType: 'performanceId', id: morningstarId })
@@ -88,7 +88,8 @@ async function createApp() {
         : Promise.reject(new Error('Sin ID Morningstar')),
       isin
         ? cnmv.debugAllEndpoints(isin)
-        : Promise.reject(new Error('Añade &isin=ES... a la URL para probar CNMV'))
+        : Promise.reject(new Error('Añade &isin=ES... a la URL para probar CNMV')),
+      fetchStooqDebug(id)
     ]);
 
     const yahooData = yahooResult.status === 'fulfilled' ? yahooResult.value : null;
@@ -122,7 +123,10 @@ async function createApp() {
       } : { error: scraperResult.reason?.message },
       cnmv: cnmvResult.status === 'fulfilled'
         ? cnmvResult.value
-        : { error: cnmvResult.reason?.message }
+        : { error: cnmvResult.reason?.message },
+      stooq: stooqResult.status === 'fulfilled'
+        ? stooqResult.value
+        : { error: stooqResult.reason?.message }
     });
   });
 
@@ -184,6 +188,65 @@ async function createApp() {
   });
 
   return app;
+}
+
+// ── Stooq debug helper ────────────────────────────────────────────────────────
+// Stooq.com is a free Polish financial data site that serves CSV downloads.
+// It uses the same Yahoo symbol format (e.g. 0P0001DFE8.F) and may have
+// more current NAV data than Yahoo Finance for European mutual funds.
+async function fetchStooqDebug(symbol) {
+  const STOOQ_HEADERS = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    'Accept': 'text/html,text/plain,*/*',
+    'Referer': 'https://stooq.com/'
+  };
+
+  const url = `https://stooq.com/q/d/l/?s=${encodeURIComponent(symbol)}&i=d`;
+
+  try {
+    const resp = await fetch(url, {
+      headers: STOOQ_HEADERS,
+      signal: AbortSignal.timeout(12000)
+    });
+
+    if (!resp.ok) {
+      return { ok: false, status: resp.status, url, error: `Stooq HTTP ${resp.status}` };
+    }
+
+    const text = await resp.text();
+    const rawPreview = text.slice(0, 300);
+
+    // Stooq CSV format: Date,Open,High,Low,Close,Volume
+    const lines = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+
+    if (lines.length < 2) {
+      return { ok: false, url, error: 'Stooq: respuesta vacía o sin filas', rawPreview };
+    }
+
+    const history = lines
+      .slice(1)
+      .map((line) => {
+        const cols = line.split(',');
+        return {
+          date: cols[0]?.trim(),
+          close: parseFloat(cols[4]?.trim())
+        };
+      })
+      .filter((p) => p.date && /^\d{4}-\d{2}-\d{2}$/.test(p.date) && Number.isFinite(p.close))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    return {
+      ok: true,
+      url,
+      status: resp.status,
+      rowCount: history.length,
+      latestPoint: history.at(-1),
+      recentHistory: history.slice(-7),
+      rawPreview
+    };
+  } catch (error) {
+    return { ok: false, url, error: error.message };
+  }
 }
 
 if (require.main === module) {
