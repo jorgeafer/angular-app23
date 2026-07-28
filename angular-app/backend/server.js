@@ -68,23 +68,28 @@ async function createApp() {
     const { YahooFinanceHttpProvider } = require('./src/providers/yahoo-finance-http.provider');
     const { DwsMorningstarProvider } = require('./src/providers/dws-morningstar.provider');
     const { MorningstarScraperProvider } = require('./src/providers/morningstar-scraper.provider');
+    const { CnmvProvider } = require('./src/providers/cnmv.provider');
     const { env: appEnv } = require('./src/config/env');
     const yahoo = new YahooFinanceHttpProvider();
+    const cnmv = new CnmvProvider();
     const started = Date.now();
 
+    // isin opcional: /api/debug/snapshot?id=0P0001DFE8.F&assetType=fund&isin=ES0175855025
+    const isin = req.query.isin ?? null;
     const morningstarId = id.match(/^(0P[A-Z0-9]+)(?:\.F)?$/i)?.[1]?.toUpperCase() ?? null;
 
-    const tasks = {
-      yahoo: yahoo.fetchChart(id),
-      dws: appEnv.provider === 'dws' && morningstarId
+    const [yahooResult, dwsResult, scraperResult, cnmvResult] = await Promise.allSettled([
+      yahoo.fetchChart(id),
+      appEnv.provider === 'dws' && morningstarId
         ? new DwsMorningstarProvider().getAssetDetails({ assetType: 'fund', idType: 'performanceId', id: morningstarId })
-        : Promise.reject(new Error(`DWS no configurado (provider=${appEnv.provider}) o sin ID Morningstar`)),
-      morningstarScraper: morningstarId
+        : Promise.reject(new Error(`DWS no configurado (provider=${appEnv.provider})`)),
+      morningstarId
         ? new MorningstarScraperProvider().getFundSnapshot({ assetType: 'fund', idType: 'performanceId', id: morningstarId })
-        : Promise.reject(new Error('No es un símbolo Morningstar (0P*.F)'))
-    };
-
-    const [yahooResult, dwsResult, scraperResult] = await Promise.allSettled(Object.values(tasks));
+        : Promise.reject(new Error('Sin ID Morningstar')),
+      isin
+        ? cnmv.debugAllEndpoints(isin)
+        : Promise.reject(new Error('Añade &isin=ES... a la URL para probar CNMV'))
+    ]);
 
     const yahooData = yahooResult.status === 'fulfilled' ? yahooResult.value : null;
     const latestChartPoint = yahooData?.dailyPerformance?.at(-1);
@@ -95,6 +100,7 @@ async function createApp() {
       id,
       assetType,
       morningstarId,
+      isinProvided: isin,
       yahoo: yahooData ? {
         realtimePrice: yahooData.meta?.regularMarketPrice,
         realtimeDate: yahooData.meta?.regularMarketTime
@@ -113,7 +119,10 @@ async function createApp() {
         nav: scraperResult.value?.nav,
         navDate: scraperResult.value?.navDate,
         recentHistory: scraperResult.value?.dailyPerformance?.slice(-5) ?? []
-      } : { error: scraperResult.reason?.message }
+      } : { error: scraperResult.reason?.message },
+      cnmv: cnmvResult.status === 'fulfilled'
+        ? cnmvResult.value
+        : { error: cnmvResult.reason?.message }
     });
   });
 
