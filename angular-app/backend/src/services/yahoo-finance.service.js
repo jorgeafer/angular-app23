@@ -25,32 +25,39 @@ function createDefaultProvider() {
     },
 
     async getFundSnapshot(request) {
-      // Si el usuario especificó un yahooSymbol, usar Yahoo Finance directamente
-      if (request.yahooSymbol) {
-        return await yf.getFundSnapshot(request);
+      // Símbolos 0P*.F son IDs de Morningstar con sufijo de Yahoo Finance.
+      // Morningstar tiene el VL más actualizado (T+1) — intentarlo primero.
+      const morningstarId = extractMorningstarId(request.yahooSymbol ?? request.id);
+      if (morningstarId) {
+        try {
+          const { MorningstarScraperProvider } = require('../providers/morningstar-scraper.provider');
+          const ms = new MorningstarScraperProvider();
+          return await ms.getFundSnapshot({ ...request, idType: 'performanceId', id: morningstarId });
+        } catch {
+          // Si Morningstar falla, seguir con Yahoo
+        }
       }
 
-      // Intentar Yahoo Finance primero (para fondos que SÍ están allí)
+      // Intentar Yahoo Finance (cubre fondos sin ID de Morningstar)
       try {
         return await yf.getFundSnapshot(request);
       } catch (yahooError) {
-        // Si Yahoo falla, intentar Morningstar búsqueda (API pública, sin credenciales)
-        try {
-          const { MorningstarSearchProvider } = require('../providers/morningstar-search.provider');
-          const ms = new MorningstarSearchProvider();
-          return await ms.getFundSnapshot(request);
-        } catch (msError) {
-          // Si Morningstar también falla, intentar Finnhub
-          if (env.finnhubApiKey) {
-            try {
-              const { FinnhubProvider } = require('../providers/finnhub.provider');
-              return new FinnhubProvider(env.finnhubApiKey).getFundSnapshot(request);
-            } catch {
-              throw yahooError; // Lanzar error original de Yahoo
-            }
-          }
-          throw yahooError;
+        // Si Yahoo también falla, intentar búsqueda en Morningstar por ISIN
+        if (request.idType === 'isin') {
+          try {
+            const { MorningstarSearchProvider } = require('../providers/morningstar-search.provider');
+            const ms = new MorningstarSearchProvider();
+            return await ms.getFundSnapshot(request);
+          } catch {}
         }
+        // Fallback a Finnhub si está disponible
+        if (env.finnhubApiKey) {
+          try {
+            const { FinnhubProvider } = require('../providers/finnhub.provider');
+            return new FinnhubProvider(env.finnhubApiKey).getFundSnapshot(request);
+          } catch {}
+        }
+        throw yahooError;
       }
     },
 
@@ -98,6 +105,14 @@ class YahooFinanceService {
 
     return this.provider.getMarketSeries(symbol);
   }
+}
+
+// Los símbolos de Yahoo del tipo 0P0001DFE8.F contienen el performance ID de Morningstar.
+// Extraerlo permite consultar Morningstar directamente sin búsqueda previa.
+function extractMorningstarId(symbolOrId) {
+  if (!symbolOrId || typeof symbolOrId !== 'string') return null;
+  const match = symbolOrId.match(/^(0P[A-Z0-9]+)(?:\.F)?$/i);
+  return match ? match[1].toUpperCase() : null;
 }
 
 function validateRequest(request) {

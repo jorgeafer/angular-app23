@@ -66,58 +66,57 @@ async function createApp() {
     }
 
     const { YahooFinanceHttpProvider } = require('./src/providers/yahoo-finance-http.provider');
-    const provider = new YahooFinanceHttpProvider();
+    const { MorningstarScraperProvider } = require('./src/providers/morningstar-scraper.provider');
+    const yahoo = new YahooFinanceHttpProvider();
+    const morningstar = new MorningstarScraperProvider();
     const started = Date.now();
 
-    try {
-      const symbol = id;
-      const { meta, dailyPerformance } = await provider.fetchChart(symbol);
-      const latestChartPoint = dailyPerformance.at(-1);
+    // Extraer performance ID de Morningstar si el símbolo es 0P*.F
+    const morningstarId = id.match(/^(0P[A-Z0-9]+)(?:\.F)?$/i)?.[1]?.toUpperCase() ?? null;
 
-      const realtimePrice = meta?.regularMarketPrice;
-      const realtimeDate = meta?.regularMarketTime
-        ? new Date(meta.regularMarketTime * 1000).toISOString().slice(0, 10)
-        : null;
+    const [yahooResult, morningstarResult] = await Promise.allSettled([
+      yahoo.fetchChart(id),
+      morningstarId
+        ? morningstar.getFundSnapshot({ assetType: 'fund', idType: 'performanceId', id: morningstarId })
+        : Promise.reject(new Error('No es un símbolo Morningstar (0P*.F)'))
+    ]);
 
-      res.json({
-        ok: true,
-        durationMs: Date.now() - started,
-        id,
-        assetType,
-        idType,
-        // Precio en tiempo real del meta (lo que usaremos ahora)
+    const yahooData = yahooResult.status === 'fulfilled' ? yahooResult.value : null;
+    const msData = morningstarResult.status === 'fulfilled' ? morningstarResult.value : null;
+
+    const latestChartPoint = yahooData?.dailyPerformance?.at(-1);
+    const realtimePrice = yahooData?.meta?.regularMarketPrice;
+    const realtimeDate = yahooData?.meta?.regularMarketTime
+      ? new Date(yahooData.meta.regularMarketTime * 1000).toISOString().slice(0, 10)
+      : null;
+
+    res.json({
+      ok: true,
+      durationMs: Date.now() - started,
+      id,
+      assetType,
+      morningstarId,
+      yahoo: yahooResult.status === 'fulfilled' ? {
         realtimePrice,
         realtimeDate,
-        realtimeTimestamp: meta?.regularMarketTime,
-        // Último punto del chart histórico (el que se usaba antes)
         lastChartClose: latestChartPoint?.close,
         lastChartDate: latestChartPoint?.date,
-        // Resumen del meta completo
-        metaSummary: {
-          currency: meta?.currency,
-          longName: meta?.longName,
-          regularMarketPrice: meta?.regularMarketPrice,
-          regularMarketTime: meta?.regularMarketTime,
-          previousClose: meta?.previousClose,
-          chartPreviousClose: meta?.chartPreviousClose,
-          dataGranularity: meta?.dataGranularity,
-          range: meta?.range,
-          exchangeName: meta?.exchangeName,
-        },
-        // Últimos 5 puntos del chart para ver el lag
-        recentHistory: dailyPerformance.slice(-5)
-      });
-    } catch (error) {
-      res.json({
-        ok: false,
-        durationMs: Date.now() - started,
-        id,
-        assetType,
-        idType,
-        error: error.message,
-        stack: error.stack
-      });
-    }
+        recentHistory: yahooData.dailyPerformance.slice(-5),
+        meta: {
+          currency: yahooData.meta?.currency,
+          longName: yahooData.meta?.longName,
+          regularMarketPrice: yahooData.meta?.regularMarketPrice,
+          regularMarketTime: yahooData.meta?.regularMarketTime,
+          previousClose: yahooData.meta?.previousClose,
+          exchangeName: yahooData.meta?.exchangeName,
+        }
+      } : { error: yahooResult.reason?.message },
+      morningstar: msData ? {
+        nav: msData.nav,
+        navDate: msData.navDate,
+        recentHistory: Array.isArray(msData.dailyPerformance) ? msData.dailyPerformance.slice(-5) : []
+      } : { error: morningstarResult.reason?.message }
+    });
   });
 
   // Cron job: actualiza precios — protegido con CRON_SECRET (sin JWT)
