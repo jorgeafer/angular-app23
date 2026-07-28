@@ -43,6 +43,11 @@ class YahooFinanceHttpProvider {
       };
     }
 
+    const realtimePrice = meta?.regularMarketPrice;
+    const realtimeDate = meta?.regularMarketTime
+      ? new Date(meta.regularMarketTime * 1000).toISOString().slice(0, 10)
+      : null;
+
     return {
       assetType: 'equity',
       requestedId: request.id,
@@ -53,8 +58,8 @@ class YahooFinanceHttpProvider {
       ticker: symbol,
       exchange: meta?.fullExchangeName ?? meta?.exchangeName,
       currency: meta?.currency,
-      latestPrice: latestPoint?.close ?? meta?.regularMarketPrice,
-      latestPriceDate: latestPoint?.date,
+      latestPrice: realtimePrice ?? latestPoint?.close,
+      latestPriceDate: realtimeDate ?? latestPoint?.date,
       dailyPerformance,
       valuationMetrics: {},
       financialsSummary: {}
@@ -66,6 +71,15 @@ class YahooFinanceHttpProvider {
     const { meta, dailyPerformance } = await this.fetchChart(symbol);
     const latestPoint = dailyPerformance.at(-1);
 
+    // meta.regularMarketPrice puede tener el VL del día hábil más reciente,
+    // que puede ser más actual que el último punto del chart histórico
+    const realtimePrice = meta?.regularMarketPrice;
+    const realtimeDate = meta?.regularMarketTime
+      ? new Date(meta.regularMarketTime * 1000).toISOString().slice(0, 10)
+      : null;
+    const nav = realtimePrice ?? latestPoint?.close;
+    const navDate = realtimeDate ?? latestPoint?.date;
+
     return {
       assetType: 'fund',
       requestedId: request.id,
@@ -73,8 +87,8 @@ class YahooFinanceHttpProvider {
       resolvedIdType: request.idType,
       name: meta?.longName ?? meta?.shortName ?? request.name ?? symbol,
       isin: request.idType === 'isin' ? request.id : undefined,
-      nav: latestPoint?.close ?? meta?.regularMarketPrice,
-      navDate: latestPoint?.date,
+      nav,
+      navDate,
       dailyPerformance,
       topHoldings: [],
       geographicExposure: [],

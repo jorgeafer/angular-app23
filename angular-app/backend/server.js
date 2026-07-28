@@ -65,18 +65,48 @@ async function createApp() {
       return;
     }
 
-    const { YahooFinanceService } = require('./src/services/yahoo-finance.service');
-    const svc = new YahooFinanceService();
+    const { YahooFinanceHttpProvider } = require('./src/providers/yahoo-finance-http.provider');
+    const provider = new YahooFinanceHttpProvider();
     const started = Date.now();
 
     try {
-      let snapshot;
-      if (assetType === 'fund') {
-        snapshot = await svc.getFundSnapshot({ assetType, idType, id });
-      } else {
-        snapshot = await svc.getAssetDetails({ assetType, idType, id });
-      }
-      res.json({ ok: true, durationMs: Date.now() - started, id, assetType, idType, snapshot });
+      const symbol = id;
+      const { meta, dailyPerformance } = await provider.fetchChart(symbol);
+      const latestChartPoint = dailyPerformance.at(-1);
+
+      const realtimePrice = meta?.regularMarketPrice;
+      const realtimeDate = meta?.regularMarketTime
+        ? new Date(meta.regularMarketTime * 1000).toISOString().slice(0, 10)
+        : null;
+
+      res.json({
+        ok: true,
+        durationMs: Date.now() - started,
+        id,
+        assetType,
+        idType,
+        // Precio en tiempo real del meta (lo que usaremos ahora)
+        realtimePrice,
+        realtimeDate,
+        realtimeTimestamp: meta?.regularMarketTime,
+        // Último punto del chart histórico (el que se usaba antes)
+        lastChartClose: latestChartPoint?.close,
+        lastChartDate: latestChartPoint?.date,
+        // Resumen del meta completo
+        metaSummary: {
+          currency: meta?.currency,
+          longName: meta?.longName,
+          regularMarketPrice: meta?.regularMarketPrice,
+          regularMarketTime: meta?.regularMarketTime,
+          previousClose: meta?.previousClose,
+          chartPreviousClose: meta?.chartPreviousClose,
+          dataGranularity: meta?.dataGranularity,
+          range: meta?.range,
+          exchangeName: meta?.exchangeName,
+        },
+        // Últimos 5 puntos del chart para ver el lag
+        recentHistory: dailyPerformance.slice(-5)
+      });
     } catch (error) {
       res.json({
         ok: false,
