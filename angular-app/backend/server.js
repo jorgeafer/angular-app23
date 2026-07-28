@@ -49,6 +49,47 @@ async function createApp() {
     }
   });
 
+  // Endpoint de debug — comprueba lo que devuelve el servicio para un símbolo concreto
+  // GET /api/debug/snapshot?id=SAN.MC&assetType=equity&idType=symbol
+  // GET /api/debug/snapshot?id=0P0001DFE8.F&assetType=fund&idType=symbol
+  app.get('/api/debug/snapshot', requireAuth(), async (req, res) => {
+    const { id, assetType, idType = 'symbol' } = req.query;
+
+    if (!id || !assetType) {
+      res.status(400).json({ error: 'Se requieren los parámetros id y assetType' });
+      return;
+    }
+
+    if (!['fund', 'equity'].includes(assetType)) {
+      res.status(400).json({ error: 'assetType debe ser "fund" o "equity"' });
+      return;
+    }
+
+    const { YahooFinanceService } = require('./src/services/yahoo-finance.service');
+    const svc = new YahooFinanceService();
+    const started = Date.now();
+
+    try {
+      let snapshot;
+      if (assetType === 'fund') {
+        snapshot = await svc.getFundSnapshot({ assetType, idType, id });
+      } else {
+        snapshot = await svc.getAssetDetails({ assetType, idType, id });
+      }
+      res.json({ ok: true, durationMs: Date.now() - started, id, assetType, idType, snapshot });
+    } catch (error) {
+      res.json({
+        ok: false,
+        durationMs: Date.now() - started,
+        id,
+        assetType,
+        idType,
+        error: error.message,
+        stack: error.stack
+      });
+    }
+  });
+
   // Cron job: actualiza precios — protegido con CRON_SECRET (sin JWT)
   app.get('/api/cron/refresh', async (req, res) => {
     const secret = env.cronSecret;
