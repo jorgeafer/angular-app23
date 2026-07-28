@@ -1,5 +1,5 @@
 
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -22,7 +22,7 @@ import { formatDateEs } from '../utils/formatting';
   templateUrl: './asset-detail.component.html',
   styleUrl: './asset-detail.component.css'
 })
-export class AssetDetailComponent implements OnInit {
+export class AssetDetailComponent implements OnInit, OnDestroy {
   protected isLoading = true;
   protected errorMessage = '';
   protected backRoute = '/';
@@ -67,6 +67,8 @@ export class AssetDetailComponent implements OnInit {
     { key: 'all', label: 'Todo' }
   ];
 
+  private readonly onRefreshPricesEvent = () => this.handleRefreshPrices();
+
   constructor(
     private readonly route: ActivatedRoute,
     private readonly portfolioDataService: PortfolioDataService,
@@ -78,6 +80,8 @@ export class AssetDetailComponent implements OnInit {
     const routeData = this.route.snapshot.data;
     this.backRoute = routeData['backRoute'] ?? this.backRoute;
     this.portfolioKey = routeData['portfolioKey'] ?? this.portfolioKey;
+
+    window.addEventListener('portfolio:refreshPrices', this.onRefreshPricesEvent);
 
     if (!id) {
       this.errorMessage = 'No se ha indicado el activo.';
@@ -99,6 +103,22 @@ export class AssetDetailComponent implements OnInit {
       this.errorMessage = error instanceof Error ? error.message : 'Error al cargar el detalle del activo.';
     } finally {
       this.isLoading = false;
+    }
+  }
+
+  ngOnDestroy(): void {
+    window.removeEventListener('portfolio:refreshPrices', this.onRefreshPricesEvent);
+  }
+
+  private async handleRefreshPrices(): Promise<void> {
+    if (!this.asset) return;
+    window.dispatchEvent(new CustomEvent('portfolio:refreshState', { detail: { isRefreshing: true } }));
+    try {
+      await this.portfolioDataService.refreshPrices(this.portfolioKey);
+      const refreshed = await this.portfolioDataService.getAssetById(this.asset.id, this.portfolioKey);
+      if (refreshed) this.asset = refreshed;
+    } finally {
+      window.dispatchEvent(new CustomEvent('portfolio:refreshState', { detail: { isRefreshing: false } }));
     }
   }
 
