@@ -52,7 +52,7 @@ async function createApp() {
   // Endpoint de debug — comprueba lo que devuelve el servicio para un símbolo concreto
   // GET /api/debug/snapshot?id=SAN.MC&assetType=equity&idType=symbol
   // GET /api/debug/snapshot?id=0P0001DFE8.F&assetType=fund&idType=symbol
-  app.get('/api/debug/snapshot', requireAuth(), async (req, res) => {
+  app.get('/api/debug/snapshot', async (req, res) => {
     const { id, assetType, idType = 'symbol' } = req.query;
 
     if (!id || !assetType) {
