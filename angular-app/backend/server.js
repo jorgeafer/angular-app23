@@ -66,29 +66,28 @@ async function createApp() {
     }
 
     const { YahooFinanceHttpProvider } = require('./src/providers/yahoo-finance-http.provider');
+    const { DwsMorningstarProvider } = require('./src/providers/dws-morningstar.provider');
     const { MorningstarScraperProvider } = require('./src/providers/morningstar-scraper.provider');
+    const { env: appEnv } = require('./src/config/env');
     const yahoo = new YahooFinanceHttpProvider();
-    const morningstar = new MorningstarScraperProvider();
     const started = Date.now();
 
-    // Extraer performance ID de Morningstar si el símbolo es 0P*.F
     const morningstarId = id.match(/^(0P[A-Z0-9]+)(?:\.F)?$/i)?.[1]?.toUpperCase() ?? null;
 
-    const [yahooResult, morningstarResult] = await Promise.allSettled([
-      yahoo.fetchChart(id),
-      morningstarId
-        ? morningstar.getFundSnapshot({ assetType: 'fund', idType: 'performanceId', id: morningstarId })
+    const tasks = {
+      yahoo: yahoo.fetchChart(id),
+      dws: appEnv.provider === 'dws' && morningstarId
+        ? new DwsMorningstarProvider().getAssetDetails({ assetType: 'fund', idType: 'performanceId', id: morningstarId })
+        : Promise.reject(new Error(`DWS no configurado (provider=${appEnv.provider}) o sin ID Morningstar`)),
+      morningstarScraper: morningstarId
+        ? new MorningstarScraperProvider().getFundSnapshot({ assetType: 'fund', idType: 'performanceId', id: morningstarId })
         : Promise.reject(new Error('No es un símbolo Morningstar (0P*.F)'))
-    ]);
+    };
+
+    const [yahooResult, dwsResult, scraperResult] = await Promise.allSettled(Object.values(tasks));
 
     const yahooData = yahooResult.status === 'fulfilled' ? yahooResult.value : null;
-    const msData = morningstarResult.status === 'fulfilled' ? morningstarResult.value : null;
-
     const latestChartPoint = yahooData?.dailyPerformance?.at(-1);
-    const realtimePrice = yahooData?.meta?.regularMarketPrice;
-    const realtimeDate = yahooData?.meta?.regularMarketTime
-      ? new Date(yahooData.meta.regularMarketTime * 1000).toISOString().slice(0, 10)
-      : null;
 
     res.json({
       ok: true,
@@ -96,26 +95,25 @@ async function createApp() {
       id,
       assetType,
       morningstarId,
-      yahoo: yahooResult.status === 'fulfilled' ? {
-        realtimePrice,
-        realtimeDate,
+      yahoo: yahooData ? {
+        realtimePrice: yahooData.meta?.regularMarketPrice,
+        realtimeDate: yahooData.meta?.regularMarketTime
+          ? new Date(yahooData.meta.regularMarketTime * 1000).toISOString().slice(0, 10)
+          : null,
         lastChartClose: latestChartPoint?.close,
         lastChartDate: latestChartPoint?.date,
-        recentHistory: yahooData.dailyPerformance.slice(-5),
-        meta: {
-          currency: yahooData.meta?.currency,
-          longName: yahooData.meta?.longName,
-          regularMarketPrice: yahooData.meta?.regularMarketPrice,
-          regularMarketTime: yahooData.meta?.regularMarketTime,
-          previousClose: yahooData.meta?.previousClose,
-          exchangeName: yahooData.meta?.exchangeName,
-        }
+        recentHistory: yahooData.dailyPerformance.slice(-5)
       } : { error: yahooResult.reason?.message },
-      morningstar: msData ? {
-        nav: msData.nav,
-        navDate: msData.navDate,
-        recentHistory: Array.isArray(msData.dailyPerformance) ? msData.dailyPerformance.slice(-5) : []
-      } : { error: morningstarResult.reason?.message }
+      dws: dwsResult.status === 'fulfilled' ? {
+        nav: dwsResult.value?.nav,
+        navDate: dwsResult.value?.navDate,
+        name: dwsResult.value?.name
+      } : { error: dwsResult.reason?.message },
+      morningstarScraper: scraperResult.status === 'fulfilled' ? {
+        nav: scraperResult.value?.nav,
+        navDate: scraperResult.value?.navDate,
+        recentHistory: scraperResult.value?.dailyPerformance?.slice(-5) ?? []
+      } : { error: scraperResult.reason?.message }
     });
   });
 

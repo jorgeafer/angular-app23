@@ -25,24 +25,50 @@ function createDefaultProvider() {
     },
 
     async getFundSnapshot(request) {
-      // Símbolos 0P*.F son IDs de Morningstar con sufijo de Yahoo Finance.
-      // Morningstar tiene el VL más actualizado (T+1) — intentarlo primero.
       const morningstarId = extractMorningstarId(request.yahooSymbol ?? request.id);
+
+      // 1. Si DWS está configurado y tenemos performance ID, combinar:
+      //    - DWS para el VL actual (T+1)
+      //    - Yahoo para el histórico del gráfico
+      if (env.provider === 'dws' && morningstarId) {
+        try {
+          const { DwsMorningstarProvider } = require('../providers/dws-morningstar.provider');
+          const dws = new DwsMorningstarProvider();
+          const [dwsSnap, yahooSnap] = await Promise.allSettled([
+            dws.getAssetDetails({ ...request, assetType: 'fund', idType: 'performanceId', id: morningstarId }),
+            yf.getFundSnapshot(request)
+          ]);
+
+          const dws_ = dwsSnap.status === 'fulfilled' ? dwsSnap.value : null;
+          const yahoo_ = yahooSnap.status === 'fulfilled' ? yahooSnap.value : null;
+
+          if (dws_?.nav != null) {
+            return {
+              ...(yahoo_ ?? {}),
+              ...dws_,
+              // Preservar el histórico de Yahoo para el gráfico de la ficha
+              dailyPerformance: yahoo_?.dailyPerformance ?? dws_.dailyPerformance ?? []
+            };
+          }
+        } catch {
+          // Si falla todo, continuar con el flujo normal
+        }
+      }
+
+      // 2. Morningstar scraper público (puede estar bloqueado desde Vercel)
       if (morningstarId) {
         try {
           const { MorningstarScraperProvider } = require('../providers/morningstar-scraper.provider');
           const ms = new MorningstarScraperProvider();
-          return await ms.getFundSnapshot({ ...request, idType: 'performanceId', id: morningstarId });
-        } catch {
-          // Si Morningstar falla, seguir con Yahoo
-        }
+          const snap = await ms.getFundSnapshot({ ...request, idType: 'performanceId', id: morningstarId });
+          if (snap?.nav != null || snap?.dailyPerformance?.length > 0) return snap;
+        } catch {}
       }
 
-      // Intentar Yahoo Finance (cubre fondos sin ID de Morningstar)
+      // 3. Yahoo Finance (datos históricos, puede ir con lag T+2/T+3)
       try {
         return await yf.getFundSnapshot(request);
       } catch (yahooError) {
-        // Si Yahoo también falla, intentar búsqueda en Morningstar por ISIN
         if (request.idType === 'isin') {
           try {
             const { MorningstarSearchProvider } = require('../providers/morningstar-search.provider');
@@ -50,7 +76,6 @@ function createDefaultProvider() {
             return await ms.getFundSnapshot(request);
           } catch {}
         }
-        // Fallback a Finnhub si está disponible
         if (env.finnhubApiKey) {
           try {
             const { FinnhubProvider } = require('../providers/finnhub.provider');
