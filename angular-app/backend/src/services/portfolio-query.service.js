@@ -699,31 +699,9 @@ function applyOperationsToRow(row, operations) {
     return row;
   }
 
-  // If row already has shares/totalInvested values from direct edits, preserve them
-  // Only recalculate if this is a seed operation (no real user operations)
-  const isSeedOnly = operations.length === 1 && operations[0].operationType === 'seed';
-
-  if (!isSeedOnly) {
-    // User has actual operations, but keep the shares/totalInvested from DB
-    // These may have been edited directly and should not be overwritten
-    const totalValuationValue = roundMoney((row.sharesValue || 0) * (row.unitValueNumber || 0));
-    const profitEurosValue = roundMoney(totalValuationValue - (row.totalInvestedValue || 0));
-    const totalReturnValue = (row.totalInvestedValue || 0) > 0
-      ? roundPercent((profitEurosValue / (row.totalInvestedValue || 0)) * 100)
-      : 0;
-
-    return {
-      ...row,
-      totalValuationValue,
-      totalValuation: formatCurrency(totalValuationValue),
-      profitEurosValue,
-      profitEuros: formatCurrency(profitEurosValue),
-      totalReturnValue,
-      totalReturn: formatPercent(totalReturnValue)
-    };
-  }
-
-  // Seed operation only: calculate from operations (original behavior)
+  // Always accumulate from operations so that buy/sell entries are reflected in totals.
+  // The first operation is the seed-buy seeded from the DB initial values, so it acts
+  // as the starting point and subsequent real operations are applied on top.
   let sharesValue = 0;
   let totalInvestedValue = 0;
   let cashAdjustments = 0;
