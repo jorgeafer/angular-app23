@@ -1143,6 +1143,44 @@ strong.positive {
   }
 }
 
+/* ── Touch target improvements (mobile) ───────────────────────── */
+@media (max-width: 768px) {
+  .edit-toggle {
+    min-height: 44px;
+    padding: 0 16px;
+  }
+
+  .chip-row button {
+    min-height: 44px;
+  }
+
+  .portfolio-trend-tab {
+    min-height: 44px;
+  }
+
+  .icon-button {
+    width: 44px;
+    height: 44px;
+  }
+
+  .mobile-edit-row {
+    min-height: 44px;
+  }
+
+  .modal-close {
+    width: 44px;
+    height: 44px;
+  }
+
+  .portfolio-card__header {
+    padding: 16px 16px 14px;
+  }
+
+  .totals-strip {
+    padding-inline: 16px;
+  }
+}
+
 @media (max-width: 960px) {
   .hero,
   .portfolio-trend-head,
@@ -1344,7 +1382,7 @@ strong.positive {
   .page-shell {
     padding-top: 12px;
     padding-inline: 12px;
-    padding-bottom: 24px;
+    padding-bottom: 32px;
   }
 
   .hero {
@@ -1361,11 +1399,11 @@ strong.positive {
   .chart-card,
   .portfolio-card__header,
   .portfolio-trend-card {
-    padding-inline: 18px;
+    padding-inline: 16px;
   }
 
   .toolbar-card {
-    padding: 14px 16px;
+    padding: 12px 16px;
   }
 
   .portfolio-trend-card,
@@ -1408,13 +1446,15 @@ strong.positive {
     font-size: 1.45rem;
   }
 
+  /* 2×2 grid on mobile instead of 4 stacked tiles */
   .totals-strip {
-    gap: 12px;
-    padding-inline: 18px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    padding-inline: 16px;
   }
 
   .totals-strip > div {
-    padding: 14px 16px;
+    padding: 12px 14px;
   }
 
   .modal-form {
@@ -1445,12 +1485,12 @@ strong.positive {
     padding: 10px;
   }
 
+  /* Hide Y-axis when chart stacks to single column */
   .portfolio-trend-axis--y {
-    min-width: 0;
+    display: none;
   }
 
   .portfolio-trend-axis--x,
-  .portfolio-trend-axis--y,
   .portfolio-trend-axis-ticks {
     font-size: 0.74rem;
   }
@@ -1479,7 +1519,11 @@ strong.positive {
     padding-bottom: 28px;
   }
 
-  .hero-copy,
+  /* Hide decorative hero text to prioritize content on small screens */
+  .hero-copy {
+    display: none;
+  }
+
   .cell-meta,
   .cell-performance span {
     font-size: 0.78rem;

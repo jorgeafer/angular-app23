@@ -26,13 +26,22 @@
 
 @media (max-width: 768px) {
   .detail-shell {
-    padding: 20px 16px 100px;
+    padding: 20px 16px 40px;
+  }
+
+  /* Bigger touch target for operation buttons */
+  .operation-action {
+    min-height: 44px;
+    padding-inline: 14px;
   }
 }
 
 .back-link {
   display: inline-flex;
-  margin-bottom: 18px;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 4px;
+  margin-bottom: 10px;
   color: var(--accent);
   font-weight: 700;
   text-decoration: none;
@@ -337,7 +346,7 @@ dd {
 
 .weight-bar {
   height: 10px;
-  min-width: 140px;
+  min-width: 60px;
   border-radius: 999px;
   background: rgba(34, 49, 63, 0.08);
   overflow: hidden;
@@ -666,8 +675,9 @@ dd {
 }
 
 @media (max-width: 640px) {
+  /* Remove excess top padding — header is 60px and sticky, not relative */
   .detail-shell {
-    padding-top: 72px;
+    padding-top: 16px;
     padding-inline: 16px;
   }
 
@@ -710,6 +720,47 @@ dd {
     max-width: 82px;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  /* Operations table: hide low-priority columns on mobile.
+     Keep: Fecha(1), Tipo(2), Importe(5), Acciones(8). */
+  .operations-card .data-table th:nth-child(3),
+  .operations-card .data-table td:nth-child(3),
+  .operations-card .data-table th:nth-child(4),
+  .operations-card .data-table td:nth-child(4),
+  .operations-card .data-table th:nth-child(6),
+  .operations-card .data-table td:nth-child(6),
+  .operations-card .data-table th:nth-child(7),
+  .operations-card .data-table td:nth-child(7) {
+    display: none;
+  }
+
+  /* Operations action buttons — full-width column on mobile */
+  .operations-head-actions {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .operations-head-actions .operation-action {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .operations-form__actions {
+    flex-direction: column;
+  }
+
+  .operations-form__actions .app-button-primary,
+  .operations-form__actions .app-button-secondary {
+    width: 100%;
+  }
+
+  /* Editar / Borrar buttons in table rows — stack vertically */
+  .operations-actions {
+    flex-direction: column;
+    gap: 4px;
+    min-width: 80px;
   }
 }
 

@@ -42,7 +42,7 @@
 
 .login-page__copy h1 {
   margin: 0;
-  font-size: clamp(2rem, 5vw, 3.4rem);
+  font-size: clamp(1.4rem, 5vw, 3.4rem);
   line-height: 1.02;
   font-weight: 700;
 }
@@ -90,5 +90,12 @@
   .login-page__copy,
   .login-form {
     padding: 40px 32px;
+  }
+}
+
+@media (max-width: 480px) {
+  .login-page__copy,
+  .login-form {
+    padding: 28px 20px;
   }
 }

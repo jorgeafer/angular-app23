@@ -66,6 +66,13 @@ textarea {
   font: inherit;
 }
 
+button,
+a,
+[role="button"] {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
 h1,
 h2,
 h3 {
@@ -208,6 +215,12 @@ canvas {
   border-color: rgba(220, 38, 38, 0.18);
   background: rgba(220, 38, 38, 0.08);
   color: var(--c-negative);
+}
+
+.app-message--success {
+  border-color: rgba(22, 163, 74, 0.18);
+  background: rgba(22, 163, 74, 0.08);
+  color: var(--c-positive);
 }
 
 .app-button-primary,
