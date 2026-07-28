@@ -445,6 +445,24 @@ dd {
   margin-top: 12px;
 }
 
+@media (max-width: 768px) {
+  .range-tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 4px;
+  }
+
+  .range-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .range-tab {
+    flex-shrink: 0;
+  }
+}
+
 .range-tab {
   border: 1px solid var(--line);
   border-radius: 999px;
@@ -469,7 +487,6 @@ dd {
   gap: 14px;
   margin-top: 12px;
   padding: 12px;
-  max-height: 300px;
   border-radius: 18px;
   background:
     linear-gradient(180deg, rgba(11, 122, 117, 0.06), rgba(11, 122, 117, 0.01)),
@@ -634,6 +651,17 @@ dd {
 
   .operations-form__grid {
     grid-template-columns: 1fr;
+  }
+
+  /* On single-column layout the Y-axis stacks on top and expands
+     vertically with space-between — hide it and show values inline */
+  .chart-axis--y {
+    display: none;
+  }
+
+  .chart-surface {
+    min-height: 200px;
+    height: 220px;
   }
 }
 
