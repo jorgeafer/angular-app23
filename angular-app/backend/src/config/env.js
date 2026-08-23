@@ -25,6 +25,11 @@ const env = {
     password: process.env.AUTH_PASSWORD || 'admin1234',
     sessionTtlMs: Number(process.env.AUTH_SESSION_TTL_MS || 1000 * 60 * 60 * 12),
     jwtSecret: process.env.JWT_SECRET || 'dev-secret-change-in-production'
+  },
+  passkey: {
+    rpId: process.env.PASSKEY_RP_ID || 'localhost',
+    rpName: process.env.PASSKEY_RP_NAME || 'MiCartera',
+    origin: process.env.PASSKEY_ORIGIN || 'http://localhost:4200'
   }
 };
 

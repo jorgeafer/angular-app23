@@ -1,6 +1,12 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
+import {
+  startRegistration,
+  startAuthentication,
+  browserSupportsWebAuthn,
+  platformAuthenticatorIsAvailable
+} from '@simplewebauthn/browser';
 
 type AuthResponse = {
   authenticated: boolean;
@@ -68,6 +74,46 @@ export class AuthService {
     }
 
     this.setAuthenticatedState(response.username ?? username.trim() ?? null);
+  }
+
+  async passkeySupported(): Promise<boolean> {
+    if (!browserSupportsWebAuthn()) return false;
+    return platformAuthenticatorIsAvailable();
+  }
+
+  async passkeyRegistered(): Promise<boolean> {
+    try {
+      const res = await firstValueFrom(
+        this.http.get<{ registered: boolean }>('/api/auth/passkey/status')
+      );
+      return res.registered;
+    } catch {
+      return false;
+    }
+  }
+
+  async registerPasskey(): Promise<void> {
+    const options = await firstValueFrom(
+      this.http.post<Record<string, unknown>>('/api/auth/passkey/register-options', {})
+    );
+    const attestation = await startRegistration({ optionsJSON: options as never });
+    await firstValueFrom(
+      this.http.post<{ registered: boolean }>('/api/auth/passkey/register', attestation)
+    );
+  }
+
+  async loginWithPasskey(): Promise<void> {
+    const options = await firstValueFrom(
+      this.http.post<Record<string, unknown>>('/api/auth/passkey/auth-options', {})
+    );
+    const assertion = await startAuthentication({ optionsJSON: options as never });
+    const response = await firstValueFrom(
+      this.http.post<AuthResponse>('/api/auth/passkey/authenticate', assertion)
+    );
+    if (response.token) {
+      localStorage.setItem(AuthService.TOKEN_KEY, response.token);
+    }
+    this.setAuthenticatedState(response.username ?? null);
   }
 
   async logout(): Promise<void> {

@@ -2,6 +2,8 @@ const express = require('express');
 const { env } = require('./src/config/env');
 const { attachSession, requireAuth } = require('./src/auth/auth.middleware');
 const { createAuthRouter } = require('./src/routes/auth.routes');
+const { createPasskeyRouter } = require('./src/routes/passkey.routes');
+const { ensurePasskeyTables } = require('./src/db/passkey.repository');
 const { createMorningstarRouter } = require('./src/routes/morningstar.routes');
 const { createPortfolioRouter } = require('./src/routes/portfolio.routes');
 const { createYahooRouter } = require('./src/routes/yahoo.routes');
@@ -21,6 +23,7 @@ async function createApp() {
   await portfolioImportService.initialize();
   await portfolioQueryService.initialize();
   await devaPortfolioQueryService.initialize();
+  await ensurePasskeyTables();
 
   app.use(express.json());
   app.use(attachSession());
@@ -29,6 +32,7 @@ async function createApp() {
     res.json({ ok: true, service: 'mi-cartera-backend' });
   });
   app.use('/api/auth', createAuthRouter());
+  app.use('/api/auth/passkey', createPasskeyRouter(requireAuth));
 
   // Endpoint de actualización de precios — accesible desde el botón del frontend
   app.post('/api/portfolio/refresh', requireAuth(), async (req, res, next) => {

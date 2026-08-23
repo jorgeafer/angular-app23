@@ -82,6 +82,66 @@
   width: 100%;
 }
 
+.passkey-btn {
+  gap: 8px;
+}
+
+.login-form__divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--c-muted);
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: -4px 0;
+}
+
+.login-form__divider::before,
+.login-form__divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--c-line);
+}
+
+.passkey-setup {
+  justify-content: center;
+  text-align: center;
+}
+
+.passkey-setup__icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background: var(--c-accent-light);
+  color: var(--c-accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+}
+
+.passkey-setup__icon svg {
+  width: 32px;
+  height: 32px;
+}
+
+.passkey-setup__title {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--c-ink);
+  margin: 4px 0 0;
+}
+
+.passkey-setup__desc {
+  color: var(--c-muted);
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0;
+}
+
 @media (max-width: 820px) {
   .login-page__panel {
     grid-template-columns: 1fr;
