@@ -1,5 +1,5 @@
 import { HttpErrorResponse } from '@angular/common/http';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { AuthService } from '../services/auth.service';
@@ -20,15 +20,21 @@ export class LoginComponent implements OnInit {
   protected errorMessage = '';
   protected isSubmitting = false;
 
-  protected passkeyAvailable = false;
-  protected passkeyRegistered = false;
-  protected showRegisterPasskey = false;
-  protected isPasskeyLoading = false;
+  protected readonly passkeyAvailable = signal(false);
+  protected readonly passkeyRegistered = signal(false);
+  protected readonly showRegisterPasskey = signal(false);
+  protected readonly isPasskeyLoading = signal(false);
 
   async ngOnInit(): Promise<void> {
-    this.passkeyAvailable = await this.authService.passkeySupported();
-    if (this.passkeyAvailable) {
-      this.passkeyRegistered = await this.authService.passkeyRegistered();
+    try {
+      const supported = await this.authService.passkeySupported();
+      this.passkeyAvailable.set(supported);
+      if (supported) {
+        const registered = await this.authService.passkeyRegistered();
+        this.passkeyRegistered.set(registered);
+      }
+    } catch {
+      // silently ignore — show only password form
     }
   }
 
@@ -49,9 +55,8 @@ export class LoginComponent implements OnInit {
     try {
       await this.authService.login(username, password);
 
-      // After successful password login, offer passkey registration if not yet set up
-      if (this.passkeyAvailable && !this.passkeyRegistered) {
-        this.showRegisterPasskey = true;
+      if (this.passkeyAvailable() && !this.passkeyRegistered()) {
+        this.showRegisterPasskey.set(true);
         this.isSubmitting = false;
         return;
       }
@@ -69,8 +74,8 @@ export class LoginComponent implements OnInit {
   }
 
   protected async loginWithPasskey(): Promise<void> {
-    if (this.isPasskeyLoading) return;
-    this.isPasskeyLoading = true;
+    if (this.isPasskeyLoading()) return;
+    this.isPasskeyLoading.set(true);
     this.errorMessage = '';
     try {
       await this.authService.loginWithPasskey();
@@ -78,29 +83,29 @@ export class LoginComponent implements OnInit {
     } catch {
       this.errorMessage = 'La autenticacion biometrica fallo. Intenta con usuario y contrasena.';
     } finally {
-      this.isPasskeyLoading = false;
+      this.isPasskeyLoading.set(false);
     }
   }
 
   protected async setupPasskey(): Promise<void> {
-    this.isPasskeyLoading = true;
+    this.isPasskeyLoading.set(true);
     this.errorMessage = '';
     try {
       await this.authService.registerPasskey();
-      this.passkeyRegistered = true;
-      this.showRegisterPasskey = false;
+      this.passkeyRegistered.set(true);
+      this.showRegisterPasskey.set(false);
       await this.redirectAfterLogin();
     } catch {
       this.errorMessage = 'No se pudo configurar Face ID. Puedes hacerlo mas tarde.';
-      this.showRegisterPasskey = false;
+      this.showRegisterPasskey.set(false);
       await this.redirectAfterLogin();
     } finally {
-      this.isPasskeyLoading = false;
+      this.isPasskeyLoading.set(false);
     }
   }
 
   protected async skipPasskeySetup(): Promise<void> {
-    this.showRegisterPasskey = false;
+    this.showRegisterPasskey.set(false);
     await this.redirectAfterLogin();
   }
 

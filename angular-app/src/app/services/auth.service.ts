@@ -79,7 +79,11 @@ export class AuthService {
   async passkeySupported(): Promise<boolean> {
     try {
       if (!browserSupportsWebAuthn()) return false;
-      return await platformAuthenticatorIsAvailable();
+      // platformAuthenticatorIsAvailable can return false on Chrome-iOS even with Face ID;
+      // fall back to the broader WebAuthn support check so the button always shows when
+      // the API is present (the actual biometric prompt will fail gracefully if not available).
+      const platformCheck = await platformAuthenticatorIsAvailable().catch(() => true);
+      return platformCheck;
     } catch {
       return false;
     }

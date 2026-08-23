@@ -8,7 +8,7 @@
       </p>
     </div>
 
-    @if (showRegisterPasskey) {
+    @if (showRegisterPasskey()) {
       <div class="login-form passkey-setup">
         <div class="passkey-setup__icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -27,9 +27,9 @@
           type="button"
           class="app-button-primary passkey-btn"
           (click)="setupPasskey()"
-          [disabled]="isPasskeyLoading"
+          [disabled]="isPasskeyLoading()"
         >
-          @if (isPasskeyLoading) {
+          @if (isPasskeyLoading()) {
             <svg class="spin" viewBox="0 0 24 24" width="18" height="18"><path d="M12 2a10 10 0 1 0 10 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
             Configurando...
           } @else {
@@ -43,21 +43,21 @@
           type="button"
           class="app-button-secondary"
           (click)="skipPasskeySetup()"
-          [disabled]="isPasskeyLoading"
+          [disabled]="isPasskeyLoading()"
         >
           Ahora no
         </button>
       </div>
     } @else {
       <form class="login-form" (ngSubmit)="submit()">
-        @if (passkeyAvailable && passkeyRegistered) {
+        @if (passkeyAvailable() && passkeyRegistered()) {
           <button
             type="button"
             class="app-button-primary passkey-btn"
             (click)="loginWithPasskey()"
-            [disabled]="isPasskeyLoading"
+            [disabled]="isPasskeyLoading()"
           >
-            @if (isPasskeyLoading) {
+            @if (isPasskeyLoading()) {
               <svg class="spin" viewBox="0 0 24 24" width="18" height="18"><path d="M12 2a10 10 0 1 0 10 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
               Verificando...
             } @else {
