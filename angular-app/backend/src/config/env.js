@@ -27,9 +27,9 @@ const env = {
     jwtSecret: process.env.JWT_SECRET || 'dev-secret-change-in-production'
   },
   passkey: {
-    rpId: process.env.PASSKEY_RP_ID || 'localhost',
+    rpId: (process.env.PASSKEY_RP_ID || 'localhost').trim(),
     rpName: process.env.PASSKEY_RP_NAME || 'MiCartera',
-    origin: process.env.PASSKEY_ORIGIN || 'http://localhost:4200'
+    origin: (process.env.PASSKEY_ORIGIN || 'http://localhost:4200').trim().replace(/\/$/, '')
   }
 };
 
