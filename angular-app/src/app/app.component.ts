@@ -50,8 +50,9 @@ export class AppComponent implements OnInit, OnDestroy {
     try {
       await this.authService.registerPasskey();
       this.showPasskeySetup.set(false);
-    } catch {
-      // ignore, user can retry
+    } catch (err) {
+      console.error('Passkey registration failed:', err);
+      alert('No se pudo guardar la llave de acceso en el servidor. Comprueba la consola y los ajustes PASSKEY_* en Vercel.');
     } finally {
       this.isRegisteringPasskey.set(false);
     }

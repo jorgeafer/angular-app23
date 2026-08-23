@@ -50,7 +50,7 @@
       </div>
     } @else {
       <form class="login-form" (ngSubmit)="submit()">
-        @if (passkeyAvailable() && passkeyRegistered()) {
+        @if (passkeyRegistered()) {
           <button
             type="button"
             class="app-button-primary passkey-btn"

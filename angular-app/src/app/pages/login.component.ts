@@ -27,11 +27,14 @@ export class LoginComponent implements OnInit {
 
   async ngOnInit(): Promise<void> {
     try {
-      const supported = await this.authService.passkeySupported();
-      this.passkeyAvailable.set(supported);
-      if (supported) {
-        const registered = await this.authService.passkeyRegistered();
-        this.passkeyRegistered.set(registered);
+      // Check registration status first — show button whenever the server
+      // has a credential stored, regardless of browser support detection.
+      const registered = await this.authService.passkeyRegistered();
+      this.passkeyRegistered.set(registered);
+
+      if (registered) {
+        const supported = await this.authService.passkeySupported();
+        this.passkeyAvailable.set(supported);
       }
     } catch {
       // silently ignore — show only password form
