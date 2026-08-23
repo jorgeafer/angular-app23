@@ -77,8 +77,12 @@ export class AuthService {
   }
 
   async passkeySupported(): Promise<boolean> {
-    if (!browserSupportsWebAuthn()) return false;
-    return platformAuthenticatorIsAvailable();
+    try {
+      if (!browserSupportsWebAuthn()) return false;
+      return await platformAuthenticatorIsAvailable();
+    } catch {
+      return false;
+    }
   }
 
   async passkeyRegistered(): Promise<boolean> {

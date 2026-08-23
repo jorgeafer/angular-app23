@@ -16,6 +16,8 @@ export class AppComponent implements OnInit, OnDestroy {
   protected readonly username = this.authService.username;
   protected readonly showLogout = computed(() => this.authService.isAuthenticated());
   protected readonly isRefreshingPrices = signal(false);
+  protected readonly showPasskeySetup = signal(false);
+  protected readonly isRegisteringPasskey = signal(false);
 
   private readonly onRefreshStateEvent = (e: Event) => {
     const detail = (e as CustomEvent<{ isRefreshing: boolean }>).detail;
@@ -24,10 +26,35 @@ export class AppComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     window.addEventListener('portfolio:refreshState', this.onRefreshStateEvent);
+    this.checkPasskeySetup();
   }
 
   ngOnDestroy(): void {
     window.removeEventListener('portfolio:refreshState', this.onRefreshStateEvent);
+  }
+
+  private async checkPasskeySetup(): Promise<void> {
+    try {
+      const supported = await this.authService.passkeySupported();
+      if (!supported) return;
+      const registered = await this.authService.passkeyRegistered();
+      this.showPasskeySetup.set(!registered);
+    } catch {
+      // silently ignore
+    }
+  }
+
+  protected async setupPasskey(): Promise<void> {
+    if (this.isRegisteringPasskey()) return;
+    this.isRegisteringPasskey.set(true);
+    try {
+      await this.authService.registerPasskey();
+      this.showPasskeySetup.set(false);
+    } catch {
+      // ignore, user can retry
+    } finally {
+      this.isRegisteringPasskey.set(false);
+    }
   }
 
   protected async logout(): Promise<void> {
