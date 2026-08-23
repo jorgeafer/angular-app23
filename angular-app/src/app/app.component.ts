@@ -35,8 +35,6 @@ export class AppComponent implements OnInit, OnDestroy {
 
   private async checkPasskeySetup(): Promise<void> {
     try {
-      const supported = await this.authService.passkeySupported();
-      if (!supported) return;
       const registered = await this.authService.passkeyRegistered();
       this.showPasskeySetup.set(!registered);
     } catch {
