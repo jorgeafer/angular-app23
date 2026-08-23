@@ -62,6 +62,7 @@ function createPasskeyRouter(requireAuth) {
         return;
       }
 
+      console.log('passkey verify config:', { rpID, origin, challengeFound: !!expectedChallenge, bodyType: typeof req.body });
       const verification = await verifyRegistrationResponse({
         response: req.body,
         expectedChallenge,
@@ -166,6 +167,12 @@ function createPasskeyRouter(requireAuth) {
     } catch (err) {
       res.status(500).json({ error: 'Error deleting passkey' });
     }
+  });
+
+  // Temporary debug endpoint — shows server-side passkey config
+  router.get('/debug', (_req, res) => {
+    const { rpID, origin, rpName } = getRpConfig();
+    res.json({ rpID, origin, rpName, envSet: { rpId: !!process.env.PASSKEY_RP_ID, origin: !!process.env.PASSKEY_ORIGIN } });
   });
 
   // Check if passkey is registered — public
