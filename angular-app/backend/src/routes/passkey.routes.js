@@ -84,8 +84,9 @@ function createPasskeyRouter(requireAuth) {
 
       res.json({ registered: true });
     } catch (err) {
-      console.error('passkey register error:', err);
-      res.status(500).json({ error: 'Error completing registration' });
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error('passkey register error:', msg);
+      res.status(500).json({ error: msg });
     }
   });
 
